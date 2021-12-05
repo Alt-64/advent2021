@@ -1,6 +1,6 @@
 /**
  * --- Day 1: Sonar Sweep ---
- * You'r e minding your own business on a ship at sea when the overboard alarm
+ * You're minding your own business on a ship at sea when the overboard alarm
  * goes off! You rush to see if you can help.  Apparently, one of the Elves
  * tripped and accidentally sent the sleigh keys flying into the ocean! Before
  * you know it, you're inside a submarine the Elves keep ready for situations
@@ -103,7 +103,8 @@
  * than the previous sum?
  *
  * Your puzzle answer was 1600
- */
+ *
+ **/
 use std::{fs::read_to_string, io::Error};
 
 pub fn solution(path: &str) -> Result<i32, Error> {
