@@ -1,88 +1,7 @@
-/**
- * --- Day 2: Dive! ---
- * Now, you need to figure out how to pilot this thing.
- *
- * It seems like the submarine can take a series of commands like forward 1,
- * down 2, or up 3:
- *
- *     forward X increases the horizontal position by X units.
- *     down X increases the depth by X units.
- *     up X decreases the depth by X units.
- *
- * Note that since you're on a submarine, down and up affect your depth, and so
- * they have the opposite result of what you might expect.
- *
- * The submarine seems to already have a planned course (your puzzle input). You
- * should probably figure out where it's going. For example:
- *
- * forward 5
- * down 5
- * forward 8
- * up 3
- * down 8
- * forward 2
- *
- * Your horizontal position and depth both start at 0. The steps above would
- * then modify them as follows:
- *
- *     forward 5 adds 5 to your horizontal position, a total of 5.
- *     down 5 adds 5 to your depth, resulting in a value of 5.
- *     forward 8 adds 8 to your horizontal position, a total of 13.
- *     up 3 decreases your depth by 3, resulting in a value of 2.
- *     down 8 adds 8 to your depth, resulting in a value of 10.
- *     forward 2 adds 2 to your horizontal position, a total of 15.
- *
- * After following these instructions, you would have a horizontal position of
- * 15 and a depth of 10. (Multiplying these together produces 150.)
- *
- * Calculate the horizontal position and depth you would have after following
- * the planned course. What do you get if you multiply your final horizontal
- * position by your final depth?
- *
- * Your puzzle answer was 1636725.
- *
- * --- Part Two ---
- *
- * Based on your calculations, the planned course doesn't seem to make any
- * sense. You find the submarine manual and discover that the process is
- * actually slightly more complicated.
- *
- * In addition to horizontal position and depth, you'll also need to track a
- * third value, aim, which also starts at 0. The commands also mean something
- * entirely different than you first thought:
- *
- *     down X increases your aim by X units.
- *     up X decreases your aim by X units.
- *     forward X does two things:
- *         It increases your horizontal position by X units.
- *         It increases your depth by your aim multiplied by X.
- *
- * Again note that since you're on a submarine, down and up do the opposite of
- * what you might expect: "down" means aiming in the positive direction.
- *
- * Now, the above example does something different:
- *
- *     forward 5 adds 5 to your horizontal position, a total of 5. Because your
- *         aim is 0, your depth does not change.
- *     down 5 adds 5 to your aim, resulting in a value of 5.
- *     forward 8 adds 8 to your horizontal position, a total of 13. Because your
- *         aim is 5, your depth increases by 8*5=40.
- *     up 3 decreases your aim by 3, resulting in a value of 2.
- *     down 8 adds 8 to your aim, resulting in a value of 10.
- *     forward 2 adds 2 to your horizontal position, a total of 15. Because your
- *         aim is 10, your depth increases by 2*10=20 to a total of 60.
- *
- * After following these new instructions, you would have a horizontal position
- * of 15 and a depth of 60. (Multiplying these produces 900.)
- *
- * Using this new interpretation of the commands, calculate the horizontal
- * position and depth you would have after following the planned course. What do
- * you get if you multiply your final horizontal position by your final depth?
- *
- * Your puzzle answer was 1872757425.
- *
- **/
-use std::{fs::read_to_string, io, num::ParseIntError};
+// https://adventofcode.com/2021/day/2
+use std::fs::read_to_string;
+
+use crate::errors::{Error, StringParseError};
 
 struct SubPos {
     horizontal: i32,
@@ -90,93 +9,44 @@ struct SubPos {
     aim: i32,
 }
 
-enum SubCmd {
-    Forward(i32),
-    Up(i32),
-    Down(i32),
-}
-
-#[derive(Debug)]
-pub enum Error {
-    IOError(io::Error),
-    ParseError(ParseError),
-}
-
-impl From<io::Error> for Error {
-    fn from(e: io::Error) -> Self {
-        Error::IOError(e)
-    }
-}
-impl From<ParseError> for Error {
-    fn from(e: ParseError) -> Self {
-        Error::ParseError(e)
-    }
-}
-
-#[derive(Debug)]
-pub enum ParseError {
-    NoValue(ParseIntError),
-    Unrecognized(String),
-    Malformed(String),
-}
-
-impl From<ParseIntError> for ParseError {
-    fn from(e: ParseIntError) -> Self {
-        ParseError::NoValue(e)
-    }
-}
-
-pub fn solution(path: &str) -> Result<i32, Error> {
-    let sub_cmds: Vec<SubCmd> = read_to_string(path)?
+pub fn part2(path: &str) -> Result<i32, Error> {
+    let final_pos: SubPos = read_to_string(path)?
         .split("\n")
         .filter(|&cmd| cmd != "")
-        .map(parse_sub_cmd)
-        .collect::<Result<_, ParseError>>()?;
-
-    let final_pos = sub_cmds.into_iter().fold(
-        SubPos {
-            horizontal: 0,
-            depth: 0,
-            aim: 0,
-        },
-        apply_sub_cmd,
-    );
+        .try_fold(
+            SubPos {
+                horizontal: 0,
+                depth: 0,
+                aim: 0,
+            },
+            apply_sub_cmd,
+        )?;
 
     Ok(final_pos.horizontal * final_pos.depth)
 }
 
-fn apply_sub_cmd(acc: SubPos, cmd: SubCmd) -> SubPos {
-    match cmd {
-        SubCmd::Forward(x) => SubPos {
-            horizontal: acc.horizontal + x,
-            depth: x * acc.aim + acc.depth,
-            ..acc
-        },
-        SubCmd::Up(x) => SubPos {
-            aim: acc.aim - x,
-            ..acc
-        },
-        SubCmd::Down(x) => SubPos {
-            aim: acc.aim + x,
-            ..acc
-        },
-    }
-}
-
-fn parse_sub_cmd(cmd_str: &str) -> Result<SubCmd, ParseError> {
+fn apply_sub_cmd(acc: SubPos, cmd_str: &str) -> Result<SubPos, StringParseError> {
     let cmd_strs = cmd_str.split(" ").collect::<Vec<&str>>();
-    let instruction = cmd_strs
-        .get(0)
-        .ok_or(ParseError::Malformed(cmd_str.to_string()))?;
-    let value = cmd_strs
-        .get(1)
-        .ok_or(ParseError::Malformed(cmd_str.to_string()))?
-        .parse::<i32>()?;
+    if cmd_strs.len() < 2 {
+        return Err(StringParseError::Malformed(cmd_str.to_string()));
+    }
+    let instruction = cmd_strs[0];
+    let distance = cmd_strs[1].parse::<i32>()?;
 
-    match *instruction {
-        "forward" => Ok(SubCmd::Forward(value)),
-        "up" => Ok(SubCmd::Up(value)),
-        "down" => Ok(SubCmd::Down(value)),
-        _ => Err(ParseError::Unrecognized(instruction.to_string())),
+    match instruction {
+        "forward" => Ok(SubPos {
+            horizontal: acc.horizontal + distance,
+            depth: acc.depth + acc.aim * distance,
+            ..acc
+        }),
+        "up" => Ok(SubPos {
+            aim: acc.aim - distance,
+            ..acc
+        }),
+        "down" => Ok(SubPos {
+            aim: acc.aim + distance,
+            ..acc
+        }),
+        _ => Err(StringParseError::Unrecognized(instruction.to_string())),
     }
 }
