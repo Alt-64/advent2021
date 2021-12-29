@@ -1,4 +1,4 @@
-use std::fs::read_to_string;
+use std::{fs::read_to_string, ops::Index};
 
 use crate::errors::Error;
 
@@ -13,11 +13,10 @@ fn read_input(path: &str) -> Result<Vec<Vec<bool>>, Error> {
 
 pub fn part1(path: &str) -> Result<i32, Error> {
     let diagnostic_report = read_input(path)?;
-    let view: Vec<&[bool]> = diagnostic_report.iter().map(Vec::as_slice).collect();
 
-    if let Some(row) = view.first() {
+    if let Some(row) = diagnostic_report.first() {
         let common_bits: Vec<bool> = (0..row.len())
-            .map(|i| get_column(&view, i))
+            .map(|i| get_column(diagnostic_report.iter(), i))
             .map(|col| most_common_bit(&col))
             .collect();
 
@@ -36,9 +35,15 @@ fn bitstring_to_bools(string: &str) -> Vec<bool> {
     string.chars().map(|c| c == '1').collect()
 }
 
-fn get_column<T: Clone>(matrix: &Vec<&[T]>, column: usize) -> Vec<T> {
-    matrix.iter().map(|b| b[column].clone()).collect()
+pub fn get_column<'a, O, I, E>(rows: O, column_idx: usize) -> Vec<E>
+where
+    O: Iterator<Item = &'a I> + 'a,
+    I: Index<usize, Output = E> + 'a + ?Sized,
+    E: Clone,
+{
+    rows.map(|b| b[column_idx].clone()).collect()
 }
+
 fn most_common_bit(bits: &[bool]) -> bool {
     let ham_weight: usize = bits.iter().map(|&b| usize::from(b)).sum();
     return ham_weight >= bits.len() / 2;
@@ -47,25 +52,25 @@ fn most_common_bit(bits: &[bool]) -> bool {
 fn calc_rate(row: &[bool]) -> i32 {
     let bitstring = row
         .iter()
-        .map(|&b| i32::from(b))
-        .map(|x| x.to_string())
+        .map(|&b| i32::from(b).to_string())
         .collect::<Vec<String>>()
         .join("");
 
     return i32::from_str_radix(bitstring.as_str(), 2).unwrap();
 }
 
-fn calc_rating<'a>(mut bits: Vec<&[bool]>, calc_mode: &dyn Fn(&[bool]) -> bool) -> i32 {
-    if let Some(bitstring) = bits.first() {
+fn calc_rating<'a>(report: &Vec<Vec<bool>>, calc_mode: &dyn Fn(&[bool]) -> bool) -> i32 {
+    let mut rows = report.clone();
+    if let Some(bitstring) = rows.first() {
         for i in 0..bitstring.len() {
-            let col = get_column(&bits, i);
+            let col = get_column(rows.iter(), i);
             let mode = calc_mode(&col);
-            bits = bits.into_iter().filter(|&row| row[i] == mode).collect();
-            if bits.len() == 1 {
+            rows = rows.into_iter().filter(|row| row[i] == mode).collect();
+            if rows.len() == 1 {
                 break;
             }
         }
-        calc_rate(bits[0])
+        calc_rate(&rows[0])
     } else {
         0
     }
@@ -75,10 +80,9 @@ fn calc_rating<'a>(mut bits: Vec<&[bool]>, calc_mode: &dyn Fn(&[bool]) -> bool) 
 
 pub fn part2(path: &str) -> Result<i32, Error> {
     let diagnostic_report = read_input(path)?;
-    let view: Vec<&[bool]> = diagnostic_report.iter().map(Vec::as_slice).collect();
 
-    let o2_rating = calc_rating(view.clone(), &|bits| most_common_bit(bits));
-    let co2_rating = calc_rating(view, &|bits| !most_common_bit(bits));
+    let o2_rating = calc_rating(&diagnostic_report, &|bits| most_common_bit(bits));
+    let co2_rating = calc_rating(&diagnostic_report, &|bits| !most_common_bit(bits));
 
     return Ok(o2_rating * co2_rating);
 }
