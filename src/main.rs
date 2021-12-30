@@ -14,12 +14,12 @@ fn main() {
             let day = day + 1;
             let input_path = format!("input_day{}.txt", day);
             let result = solver(&input_path);
-            print_solutions(day, result);
+            print_results(day, result);
         })
         .for_each(drop);
 }
 
-fn print_solutions(day: usize, result: Result<(Solution, Solution), Error>) {
+fn print_results(day: usize, result: Result<(Solution, Solution), Error>) {
     println!("== Day {} ==", day);
     if let Ok((soln1, soln2)) = result {
         println!("Part 1: {:?}", soln1);

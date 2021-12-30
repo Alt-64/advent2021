@@ -9,48 +9,88 @@ struct SubPos {
     aim: i32,
 }
 
+struct SubCmd<'a> {
+    direction: &'a str,
+    distance: i32,
+}
+
 pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
     let input = read_to_string(path)?;
-    Ok((Ok(5), Ok(5)))
+    let commands: Vec<&str> = input.split("\n").filter(|&cmd| cmd != "").collect();
+    Ok((
+        maneuver_sub(&commands, part1_controls),
+        maneuver_sub(&commands, part2_controls),
+    ))
 }
-fn part2(path: &str) -> Result<i32, Error> {
-    let final_pos: SubPos = read_to_string(path)?
-        .split("\n")
-        .filter(|&cmd| cmd != "")
+
+fn maneuver_sub(
+    commands: &[&str],
+    controls: fn(SubPos, SubCmd) -> Result<SubPos, Error>,
+) -> Result<i32, Error> {
+    let final_pos: SubPos = commands
+        .iter()
+        .map(parse_command)
+        .collect::<Result<Vec<SubCmd>, Error>>()?
+        .into_iter()
         .try_fold(
             SubPos {
                 horizontal: 0,
                 depth: 0,
                 aim: 0,
             },
-            apply_sub_cmd,
+            controls,
         )?;
 
     Ok(final_pos.horizontal * final_pos.depth)
 }
 
-fn apply_sub_cmd(acc: SubPos, cmd_str: &str) -> Result<SubPos, Error> {
+fn parse_command<'a>(cmd_str: &&'a str) -> Result<SubCmd<'a>, Error> {
     let cmd_strs = cmd_str.split(" ").collect::<Vec<&str>>();
     if cmd_strs.len() < 2 {
         return Err(Error::Malformed(cmd_str.to_string()));
     }
-    let instruction = cmd_strs[0];
+    let direction = cmd_strs[0];
     let distance = cmd_strs[1].parse::<i32>()?;
 
-    match instruction {
+    Ok(SubCmd {
+        direction,
+        distance,
+    })
+}
+
+fn part1_controls(acc: SubPos, cmd: SubCmd) -> Result<SubPos, Error> {
+    match cmd.direction {
         "forward" => Ok(SubPos {
-            horizontal: acc.horizontal + distance,
-            depth: acc.depth + acc.aim * distance,
+            horizontal: acc.horizontal + cmd.distance,
             ..acc
         }),
         "up" => Ok(SubPos {
-            aim: acc.aim - distance,
+            depth: acc.depth - cmd.distance,
             ..acc
         }),
         "down" => Ok(SubPos {
-            aim: acc.aim + distance,
+            depth: acc.depth + cmd.distance,
             ..acc
         }),
-        _ => Err(Error::Unrecognized(instruction.to_string())),
+        _ => Err(Error::Unrecognized(cmd.direction.to_string())),
+    }
+}
+
+fn part2_controls(acc: SubPos, cmd: SubCmd) -> Result<SubPos, Error> {
+    match cmd.direction {
+        "forward" => Ok(SubPos {
+            horizontal: acc.horizontal + cmd.distance,
+            depth: acc.depth + acc.aim * cmd.distance,
+            ..acc
+        }),
+        "up" => Ok(SubPos {
+            aim: acc.aim - cmd.distance,
+            ..acc
+        }),
+        "down" => Ok(SubPos {
+            aim: acc.aim + cmd.distance,
+            ..acc
+        }),
+        _ => Err(Error::Unrecognized(cmd.direction.to_string())),
     }
 }

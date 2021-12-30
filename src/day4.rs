@@ -1,6 +1,9 @@
-use std::{fs::read_to_string, io::BufRead};
+use std::fs::read_to_string;
 
-use crate::{day3::get_column, types::Error};
+use crate::{
+    day3::get_column,
+    types::{Error, Solution},
+};
 
 #[derive(Clone, Copy)]
 struct BingoSpace {
@@ -17,28 +20,31 @@ impl BingoSpace {
     }
 }
 
-type Board = Vec<Vec<BingoSpace>>;
+type Board = [[BingoSpace; 5]; 5];
 
-pub fn solver(path: &str) -> Result<(Result<i32, Error>, Result<i32, Error>), Error> {
+pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
     let (draws, mut boards) = read_input(path)?;
     let mut soln1 = None;
     let mut soln2 = None;
-    for draw in draws {
+    for curr_draw in draws {
         for b in &mut boards {
-            mark_board(b, draw);
+            mark_board(b, curr_draw);
         }
         if soln1.is_none() {
-            soln1 = part1(draw, &boards);
+            soln1 = part1(curr_draw, &boards);
         }
-        if soln2.is_none() {
-            soln2 = part2(draw, &boards);
-        }
+        soln2 = part2(curr_draw, &boards);
+
         boards = boards.into_iter().filter(|b| !won(b)).collect();
+
         if boards.len() == 0 {
             break;
         }
     }
-    Ok((soln1.ok_or(Error::Example), soln2.ok_or(Error::Example)))
+    Ok((
+        soln1.ok_or(Error::NoSolution),
+        soln2.ok_or(Error::NoSolution),
+    ))
 }
 
 fn read_input(path: &str) -> Result<(Vec<i32>, Vec<Board>), Error> {
@@ -58,16 +64,22 @@ fn read_input(path: &str) -> Result<(Vec<i32>, Vec<Board>), Error> {
 fn read_input_board(text: &[&str]) -> Result<Board, Error> {
     text.iter()
         .map(|line| read_input_board_line(*line))
-        .collect::<Result<Board, _>>()
+        .collect::<Result<Vec<[BingoSpace; 5]>, _>>()?
+        .as_slice()
+        .try_into()
+        .map_err(Error::from)
 }
 
-fn read_input_board_line(line: &str) -> Result<Vec<BingoSpace>, Error> {
+fn read_input_board_line(line: &str) -> Result<[BingoSpace; 5], Error> {
     line.split_whitespace()
         .map(|str_value| {
             let value = str_value.parse()?;
             Ok(BingoSpace::new(value))
         })
-        .collect()
+        .collect::<Result<Vec<BingoSpace>, Error>>()?
+        .as_slice()
+        .try_into()
+        .map_err(Error::from)
 }
 
 fn part1(curr_draw: i32, boards: &[Board]) -> Option<i32> {
@@ -78,13 +90,9 @@ fn part1(curr_draw: i32, boards: &[Board]) -> Option<i32> {
 }
 
 fn part2(curr_draw: i32, boards: &[Board]) -> Option<i32> {
-    let losing_board = &boards.first()?;
-    if boards.len() == 1 && won(losing_board) {
-        let score = calc_score(losing_board, curr_draw);
-        return Some(score);
-    }
-
-    None
+    let remaining_board = &boards.first()?;
+    let score = calc_score(remaining_board, curr_draw);
+    return Some(score);
 }
 
 fn mark_board(board: &mut Board, x: i32) {
