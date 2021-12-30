@@ -1,3 +1,5 @@
+pub type Solution = Result<i32, Error>;
+
 #[derive(Debug)]
 pub enum Error {
     IOError(std::io::Error),

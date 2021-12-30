@@ -1,7 +1,7 @@
 // https://adventofcode.com/2021/day/2
 use std::fs::read_to_string;
 
-use crate::errors::Error;
+use crate::types::{Error, Solution};
 
 struct SubPos {
     horizontal: i32,
@@ -9,7 +9,11 @@ struct SubPos {
     aim: i32,
 }
 
-pub fn part2(path: &str) -> Result<i32, Error> {
+pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
+    let input = read_to_string(path)?;
+    Ok((Ok(5), Ok(5)))
+}
+fn part2(path: &str) -> Result<i32, Error> {
     let final_pos: SubPos = read_to_string(path)?
         .split("\n")
         .filter(|&cmd| cmd != "")

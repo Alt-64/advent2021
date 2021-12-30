@@ -1,6 +1,6 @@
-use std::fs::read_to_string;
+use std::{fs::read_to_string, io::BufRead};
 
-use crate::{day3::get_column, errors::Error};
+use crate::{day3::get_column, types::Error};
 
 #[derive(Clone, Copy)]
 struct BingoSpace {
@@ -19,14 +19,36 @@ impl BingoSpace {
 
 type Board = Vec<Vec<BingoSpace>>;
 
+pub fn solver(path: &str) -> Result<(Result<i32, Error>, Result<i32, Error>), Error> {
+    let (draws, mut boards) = read_input(path)?;
+    let mut soln1 = None;
+    let mut soln2 = None;
+    for draw in draws {
+        for b in &mut boards {
+            mark_board(b, draw);
+        }
+        if soln1.is_none() {
+            soln1 = part1(draw, &boards);
+        }
+        if soln2.is_none() {
+            soln2 = part2(draw, &boards);
+        }
+        boards = boards.into_iter().filter(|b| !won(b)).collect();
+        if boards.len() == 0 {
+            break;
+        }
+    }
+    Ok((soln1.ok_or(Error::Example), soln2.ok_or(Error::Example)))
+}
+
 fn read_input(path: &str) -> Result<(Vec<i32>, Vec<Board>), Error> {
-    let input_str = read_to_string(path)?;
-    let input: Vec<&str> = input_str.split("\n").collect();
-    let draws = input[0]
+    let input = read_to_string(path)?;
+    let lines: Vec<&str> = input.split("\n").collect();
+    let draws = lines[0]
         .split(",")
         .map(|s| s.parse())
         .collect::<Result<Vec<i32>, _>>()?;
-    let boards: Vec<Board> = input[2..input.len() - 1]
+    let boards = lines[2..lines.len() - 1]
         .split(|s| *s == "")
         .map(read_input_board)
         .collect::<Result<Vec<Board>, _>>()?;
@@ -48,20 +70,21 @@ fn read_input_board_line(line: &str) -> Result<Vec<BingoSpace>, Error> {
         .collect()
 }
 
-pub fn part1(path: &str) -> Result<i32, Error> {
-    let (draws, mut boards) = read_input(path)?;
-    for draw in draws {
-        for b in &mut boards {
-            mark_board(b, draw);
-        }
-        if let Some(winning_board) = boards.iter().find(|&b| won(b)) {
-            let score = calc_score(winning_board, draw);
-            return Ok(score);
-        }
+fn part1(curr_draw: i32, boards: &[Board]) -> Option<i32> {
+    boards
+        .iter()
+        .find(|&b| won(b))
+        .and_then(|winning_board| Some(calc_score(winning_board, curr_draw)))
+}
+
+fn part2(curr_draw: i32, boards: &[Board]) -> Option<i32> {
+    let losing_board = &boards.first()?;
+    if boards.len() == 1 && won(losing_board) {
+        let score = calc_score(losing_board, curr_draw);
+        return Some(score);
     }
-    Err(Error::Malformed(
-        "no winning board configuration".to_string(),
-    ))
+
+    None
 }
 
 fn mark_board(board: &mut Board, x: i32) {
@@ -73,10 +96,6 @@ fn mark_board(board: &mut Board, x: i32) {
             }
         }
     }
-}
-
-fn completed(spaces: &[BingoSpace]) -> bool {
-    spaces.iter().fold(true, |acc, space| acc && space.marked)
 }
 
 fn won(board: &Board) -> bool {
@@ -93,6 +112,10 @@ fn won(board: &Board) -> bool {
     }
 }
 
+fn completed(spaces: &[BingoSpace]) -> bool {
+    spaces.iter().fold(true, |acc, space| acc && space.marked)
+}
+
 fn calc_score(board: &Board, last_draw: i32) -> i32 {
     let sum = board.iter().fold(0, |acc, curr| {
         acc + curr.iter().fold(
@@ -102,24 +125,4 @@ fn calc_score(board: &Board, last_draw: i32) -> i32 {
     });
 
     sum * last_draw
-}
-
-// ------------------------------------
-
-pub fn part2(path: &str) -> Result<i32, Error> {
-    let (draws, mut boards) = read_input(path)?;
-    for draw in draws {
-        for b in &mut boards {
-            mark_board(b, draw);
-        }
-        if boards.len() == 1 {
-            let losing_board = &boards[0];
-            if won(losing_board) {
-                let score = calc_score(losing_board, draw);
-                return Ok(score);
-            }
-        }
-        boards = boards.into_iter().filter(|b| !won(b)).collect();
-    }
-    Err(Error::Malformed("no loser board configuration".to_string()))
 }

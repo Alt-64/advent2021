@@ -1,7 +1,12 @@
 // https://adventofcode.com/2021/day/1
 use std::fs::read_to_string;
 
-use crate::errors::Error;
+use crate::types::{Error, Solution};
+
+pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
+    let input = read_input(path)?;
+    Ok((part1(&input), part2(&input)))
+}
 
 fn read_input(path: &str) -> Result<Vec<i32>, std::io::Error> {
     let input = read_to_string(path)?
@@ -12,9 +17,7 @@ fn read_input(path: &str) -> Result<Vec<i32>, std::io::Error> {
     Ok(input)
 }
 
-pub fn part1(path: &str) -> Result<i32, Error> {
-    let input = read_input(path)?;
-
+fn part1(input: &[i32]) -> Result<i32, Error> {
     let mut depth_counter = 0;
     for i in 1..input.len() {
         let prev = input[i - 1];
@@ -27,9 +30,7 @@ pub fn part1(path: &str) -> Result<i32, Error> {
     Ok(depth_counter)
 }
 
-pub fn part2(path: &str) -> Result<i32, Error> {
-    let input = read_input(path)?;
-
+fn part2(input: &[i32]) -> Result<i32, Error> {
     let mut depth_counter = 0;
     for i in 1..input.len() - 2 {
         let prev = input[i - 1] + input[i] + input[i + 1];
