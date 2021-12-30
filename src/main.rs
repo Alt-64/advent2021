@@ -12,7 +12,7 @@ fn main() {
         .enumerate()
         .map(|(day, solver)| {
             let day = day + 1;
-            let input_path = format!("input_day{}.txt", day);
+            let input_path = format!("puzzle_input/input_day{}.txt", day);
             let result = solver(&input_path);
             print_results(day, result);
         })
