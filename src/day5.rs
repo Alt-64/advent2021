@@ -1,44 +1,163 @@
 // https://adventofcode.com/2021/day/5
-use std::fs::read_to_string;
+use std::{fmt::Debug, fs::read_to_string};
 
 use crate::types::{Error, Solution};
 
 pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
-    let input = read_input(path)?;
-    Ok((part1(&input), part2(&input)))
+    let lines: Vec<Line> = read_input(path)?;
+
+    let mut x_max = 0;
+    let mut y_max = 0;
+    for line in lines.iter() {
+        if line.x_upper > x_max {
+            x_max = line.x_upper
+        }
+        if line.y_upper > y_max {
+            y_max = line.y_upper
+        }
+    }
+
+    let mut canvas = vec![vec![0; (y_max + 1) as usize]; (x_max + 1) as usize];
+
+    let soln1 = part1(&lines, &mut canvas);
+    let soln2 = part2(&lines, &mut canvas);
+
+    Ok((Ok(soln1), Ok(soln2)))
 }
 
-fn read_input(path: &str) -> Result<Vec<i32>, std::io::Error> {
-    let input = read_to_string(path)?
-        .split("\n")
-        .map(str::parse::<i32>)
+fn part1(lines: &Vec<Line>, canvas: &mut Vec<Vec<u8>>) -> i32 {
+    for line in lines.iter() {
+        line.draw_horiz(canvas);
+        line.draw_vert(canvas);
+    }
+    count_overlaps(canvas)
+}
+
+fn part2(lines: &Vec<Line>, canvas: &mut Vec<Vec<u8>>) -> i32 {
+    for line in lines.iter() {
+        line.draw_diag(canvas);
+    }
+    count_overlaps(canvas)
+}
+
+fn count_overlaps(canvas: &Vec<Vec<u8>>) -> i32 {
+    canvas
+        .iter()
         .flatten()
-        .collect::<Vec<i32>>();
-    Ok(input)
+        .filter(|&&overlap_count| overlap_count >= 2)
+        .count() as i32
 }
 
-fn part1(input: &[i32]) -> Result<i32, Error> {
-    let mut depth_counter = 0;
-    for i in 1..input.len() {
-        let prev = input[i - 1];
-        let curr = input[i];
-        if prev < curr {
-            depth_counter += 1;
+fn read_input(path: &str) -> Result<Vec<Line>, Error> {
+    read_to_string(path)?
+        .split("\n")
+        .filter(|&s| s != "")
+        .map(read_input_line)
+        .collect()
+}
+
+fn read_input_line(line_str: &str) -> Result<Line, Error> {
+    let mut points = line_str.split(" -> ").map(read_input_point).take(2);
+
+    let a = points
+        .next()
+        .ok_or(Error::Malformed(line_str.to_owned()))??;
+    let b = points
+        .next()
+        .ok_or(Error::Malformed(line_str.to_owned()))??;
+
+    Ok(Line::from_points(a, b))
+}
+
+fn read_input_point(point_str: &str) -> Result<Point, Error> {
+    let mut coords = point_str.split(',').map(str::parse::<i32>);
+
+    let x = coords
+        .next()
+        .ok_or(Error::Malformed(point_str.to_owned()))??;
+    let y = coords
+        .next()
+        .ok_or(Error::Malformed(point_str.to_owned()))??;
+
+    Ok(Point { x, y })
+}
+
+#[derive(Clone, Copy)]
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+struct Line {
+    x_lower: i32,
+    x_upper: i32,
+    y_lower: i32,
+    y_upper: i32,
+    a: i32,
+    b: i32,
+    c: i32,
+}
+
+impl Debug for Line {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "{}<=x<={}, {}<=y<={} | {}x + {}y + {} = 0",
+            self.x_lower, self.x_upper, self.y_lower, self.y_upper, self.a, self.b, self.c,
+        ))
+    }
+}
+
+impl Line {
+    fn from_points(p1: Point, p2: Point) -> Self {
+        let mut x_bounds = [p1.x, p2.x];
+        x_bounds.sort();
+        let mut y_bounds = [p1.y, p2.y];
+        y_bounds.sort();
+
+        Line {
+            x_lower: x_bounds[0],
+            x_upper: x_bounds[1],
+            y_lower: y_bounds[0],
+            y_upper: y_bounds[1],
+            a: p1.y - p2.y,
+            b: p2.x - p1.x,
+            c: p1.y * (p1.x - p2.x) + p1.x * (p2.y - p1.y),
         }
     }
 
-    Ok(depth_counter)
-}
+    fn solve_for_x(&self, y: i32) -> i32 {
+        -(self.b * y + self.c) / self.a
+    }
 
-fn part2(input: &[i32]) -> Result<i32, Error> {
-    let mut depth_counter = 0;
-    for i in 1..input.len() - 2 {
-        let prev = input[i - 1] + input[i] + input[i + 1];
-        let curr = input[i] + input[i + 1] + input[i + 2];
-        if prev < curr {
-            depth_counter += 1;
+    fn solve_for_y(&self, x: i32) -> i32 {
+        -(self.a * x + self.c) / self.b
+    }
+
+    fn draw_vert(&self, canvas: &mut Vec<Vec<u8>>) {
+        if self.x_lower == self.x_upper {
+            let x = self.solve_for_x(self.y_lower);
+            for y in self.y_lower..self.y_upper + 1 {
+                canvas[x as usize][y as usize] += 1;
+            }
         }
     }
 
-    Ok(depth_counter)
+    fn draw_horiz(&self, canvas: &mut Vec<Vec<u8>>) {
+        if self.y_lower == self.y_upper {
+            let y = self.solve_for_y(self.x_lower);
+            for x in self.x_lower..self.x_upper + 1 {
+                canvas[x as usize][y as usize] += 1;
+            }
+        }
+    }
+
+    fn draw_diag(&self, canvas: &mut Vec<Vec<u8>>) {
+        if self.x_lower != self.x_upper && self.y_lower != self.y_upper {
+            let mut y;
+            for x in self.x_lower..self.x_upper + 1 {
+                y = self.solve_for_y(x);
+                canvas[x as usize][y as usize] += 1;
+            }
+        }
+    }
 }
