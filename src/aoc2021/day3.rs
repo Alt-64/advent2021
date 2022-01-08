@@ -1,3 +1,4 @@
+// https://adventofcode.com/2021/day/3
 use std::{fs::read_to_string, ops::Index};
 
 use crate::types::{Error, Solution};

@@ -1,20 +1,16 @@
 #![feature(custom_test_frameworks)]
 use types::{Error, Solution};
 
-mod day1;
-mod day2;
-mod day3;
-mod day4;
-mod day5;
+mod aoc2021;
 mod types;
 
 fn main() {
     [
-        day1::solver,
-        day2::solver,
-        day3::solver,
-        day4::solver,
-        day5::solver,
+        aoc2021::day1::solver,
+        aoc2021::day2::solver,
+        aoc2021::day3::solver,
+        aoc2021::day4::solver,
+        aoc2021::day5::solver,
     ]
     .iter()
     .enumerate()

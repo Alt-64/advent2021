@@ -1,8 +1,9 @@
+// https://adventofcode.com/2021/day/4
 use std::fs::read_to_string;
 
-use crate::{
-    day3::get_column,
-    types::{Error, Solution},
+use {
+    super::day3::get_column,
+    crate::types::{Error, Solution},
 };
 
 #[derive(Clone, Copy)]
