@@ -30,13 +30,11 @@ pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
         for b in &mut boards {
             mark_board(b, curr_draw);
         }
-        if soln1.is_none() {
-            soln1 = part1(curr_draw, &boards);
-        }
-        soln2 = part2(curr_draw, &boards);
+
+        soln1 = soln1.or(part1(curr_draw, &boards));
+        soln2 = soln2.or(part2(curr_draw, &boards));
 
         boards = boards.into_iter().filter(|b| !won(b)).collect();
-
         if boards.len() == 0 {
             break;
         }
@@ -45,41 +43,6 @@ pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
         soln1.ok_or(Error::NoSolution),
         soln2.ok_or(Error::NoSolution),
     ))
-}
-
-fn read_input(path: &str) -> Result<(Vec<i32>, Vec<Board>), Error> {
-    let input = read_to_string(path)?;
-    let lines: Vec<&str> = input.split("\n").collect();
-    let draws = lines[0]
-        .split(",")
-        .map(|s| s.parse())
-        .collect::<Result<Vec<i32>, _>>()?;
-    let boards = lines[2..lines.len() - 1]
-        .split(|s| *s == "")
-        .map(read_input_board)
-        .collect::<Result<Vec<Board>, _>>()?;
-    Ok((draws, boards))
-}
-
-fn read_input_board(text: &[&str]) -> Result<Board, Error> {
-    text.iter()
-        .map(|line| read_input_board_line(*line))
-        .collect::<Result<Vec<[BingoSpace; 5]>, _>>()?
-        .as_slice()
-        .try_into()
-        .map_err(Error::from)
-}
-
-fn read_input_board_line(line: &str) -> Result<[BingoSpace; 5], Error> {
-    line.split_whitespace()
-        .map(|str_value| {
-            let value = str_value.parse()?;
-            Ok(BingoSpace::new(value))
-        })
-        .collect::<Result<Vec<BingoSpace>, Error>>()?
-        .as_slice()
-        .try_into()
-        .map_err(Error::from)
 }
 
 fn part1(curr_draw: i32, boards: &[Board]) -> Option<i32> {
@@ -133,4 +96,39 @@ fn calc_score(board: &Board, last_draw: i32) -> i32 {
     });
 
     sum * last_draw
+}
+
+fn read_input(path: &str) -> Result<(Vec<i32>, Vec<Board>), Error> {
+    let input = read_to_string(path)?;
+    let lines: Vec<&str> = input.split("\n").collect();
+    let draws = lines[0]
+        .split(",")
+        .map(|s| s.parse())
+        .collect::<Result<Vec<i32>, _>>()?;
+    let boards = lines[2..lines.len() - 1]
+        .split(|s| *s == "")
+        .map(read_input_board)
+        .collect::<Result<Vec<Board>, _>>()?;
+    Ok((draws, boards))
+}
+
+fn read_input_board(text: &[&str]) -> Result<Board, Error> {
+    text.iter()
+        .map(|line| read_input_board_line(*line))
+        .collect::<Result<Vec<[BingoSpace; 5]>, _>>()?
+        .as_slice()
+        .try_into()
+        .map_err(Error::from)
+}
+
+fn read_input_board_line(line: &str) -> Result<[BingoSpace; 5], Error> {
+    line.split_whitespace()
+        .map(|str_value| {
+            let value = str_value.parse()?;
+            Ok(BingoSpace::new(value))
+        })
+        .collect::<Result<Vec<BingoSpace>, Error>>()?
+        .as_slice()
+        .try_into()
+        .map_err(Error::from)
 }

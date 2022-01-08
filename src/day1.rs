@@ -8,15 +8,6 @@ pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
     Ok((part1(&input), part2(&input)))
 }
 
-fn read_input(path: &str) -> Result<Vec<i32>, std::io::Error> {
-    let input = read_to_string(path)?
-        .split("\n")
-        .map(str::parse::<i32>)
-        .flatten()
-        .collect::<Vec<i32>>();
-    Ok(input)
-}
-
 fn part1(input: &[i32]) -> Result<i32, Error> {
     let mut depth_counter = 0;
     for i in 1..input.len() {
@@ -41,4 +32,13 @@ fn part2(input: &[i32]) -> Result<i32, Error> {
     }
 
     Ok(depth_counter)
+}
+
+fn read_input(path: &str) -> Result<Vec<i32>, std::io::Error> {
+    let input = read_to_string(path)?
+        .split("\n")
+        .map(str::parse::<i32>)
+        .flatten()
+        .collect::<Vec<i32>>();
+    Ok(input)
 }

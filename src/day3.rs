@@ -7,19 +7,6 @@ pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
     Ok((part1(&report), part2(&report)))
 }
 
-fn read_input(path: &str) -> Result<Vec<Vec<bool>>, Error> {
-    let diagnostic_report: Vec<Vec<bool>> = read_to_string(path)?
-        .split("\n")
-        .filter(|&s| s != "")
-        .map(bitstring_to_bools)
-        .collect();
-    Ok(diagnostic_report)
-}
-
-fn bitstring_to_bools(string: &str) -> Vec<bool> {
-    string.chars().map(|c| c == '1').collect()
-}
-
 pub fn part1(report: &Vec<Vec<bool>>) -> Result<i32, Error> {
     if let Some(row) = report.first() {
         let common_bits: Vec<bool> = (0..row.len())
@@ -86,4 +73,15 @@ fn chem_rating<'a>(report: &Vec<Vec<bool>>, calc_mode: &dyn Fn(&[bool]) -> bool)
     }
 }
 
-// ------------------------------------
+fn read_input(path: &str) -> Result<Vec<Vec<bool>>, Error> {
+    let diagnostic_report: Vec<Vec<bool>> = read_to_string(path)?
+        .split("\n")
+        .filter(|&s| s != "")
+        .map(bitstring_to_bools)
+        .collect();
+    Ok(diagnostic_report)
+}
+
+fn bitstring_to_bools(string: &str) -> Vec<bool> {
+    string.chars().map(|c| c == '1').collect()
+}
