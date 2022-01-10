@@ -1,4 +1,5 @@
 #![feature(custom_test_frameworks)]
+#![feature(iterator_try_reduce)]
 use types::{Error, Solution};
 
 mod aoc2021;
@@ -11,6 +12,7 @@ fn main() {
         aoc2021::day3::solver,
         aoc2021::day4::solver,
         aoc2021::day5::solver,
+        aoc2021::day6::solver,
     ]
     .iter()
     .enumerate()
