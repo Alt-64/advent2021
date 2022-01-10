@@ -1,50 +1,83 @@
 use std::fs::read_to_string;
 
-use num::Float;
-
 use crate::types::{Error, Solution};
 
 const SPAWN_INTERVAL: usize = 7;
-const SPAWN_TIMER: i32 = SPAWN_INTERVAL as i32 + 2;
 
-type Flounder = i32;
+type Flounder = u128;
 
 pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
-    let flounders: Vec<Flounder> = read_to_string(path)?
+    let mut gen_a: [Flounder; SPAWN_INTERVAL] = read_to_string(path)?
         .split(',')
-        .map(|timer| Ok(-SPAWN_TIMER + timer.trim().parse::<i32>()?))
-        .collect::<Result<Vec<Flounder>, Error>>()?;
+        .map(|timer| Ok(timer.trim().parse::<usize>()?))
+        .collect::<Result<Vec<usize>, Error>>()?
+        .into_iter()
+        .fold([0; SPAWN_INTERVAL], |mut acc, f| {
+            acc[f] += 1;
+            return acc;
+        });
 
-    let soln1 = count_flounders(&flounders, 80) as i32;
-    let soln2 = count_flounders(&flounders, 256) as i32;
+    let mut soln1 = 0;
+    let generations = 256 / SPAWN_INTERVAL;
+    let remainder = 256 % SPAWN_INTERVAL;
+    println!("{}:{}", generations, remainder);
+    // for i in 0..generations {
+    //     println!("{:?} - {}", flounders, flounders.iter().sum::<u128>());
+    //     flounders = spawn_children(&flounders);
+    //     if i == 80 {
+    //         soln1 = flounders.iter().sum::<u128>() as i32;
+    //     }
+    // }
 
-    Ok((Ok(soln1), Ok(soln2)))
-}
-
-fn count_flounders(flounders: &Vec<Flounder>, last_day: i32) -> usize {
-    let mut flounders = flounders.clone();
-    let mut count = flounders.len();
-    while let Some(new_flounders) = spawn_generation(&flounders, last_day) {
-        count += new_flounders.len() as usize;
-        flounders = new_flounders;
+    println!("{:?} - {}", gen_a, gen_a.iter().sum::<u128>());
+    let gen_b = [0; SPAWN_INTERVAL];
+    let gen_c = spawn_children(&gen_a, 7);
+    for i in 2..SPAWN_INTERVAL {
+        gen_a[i] += gen_b[i];
     }
-    return count;
-}
-
-fn spawn_generation(flounders: &Vec<Flounder>, last_day: i32) -> Option<Vec<Flounder>> {
-    if flounders.len() > 0 {
-        let children = flounders
-            .into_iter()
-            .flat_map(|spawn_day| spawn_children(spawn_day, last_day))
-            .collect();
-        Some(children)
-    } else {
-        None
+    for i in 2..SPAWN_INTERVAL {
+        gen_a[i] += gen_c[i];
     }
+
+    println!("{:?} - {}", gen_a, gen_a.iter().sum::<u128>());
+    let gen_b = gen_c;
+    let gen_c = spawn_children(&gen_a, 7);
+    for i in 0..2 {
+        gen_a[i] += gen_b[i];
+    }
+    for i in 2..SPAWN_INTERVAL {
+        gen_a[i] += gen_c[i];
+    }
+    println!("{:?} - {}", gen_a, gen_a.iter().sum::<u128>());
+    let gen_b = gen_c;
+    let gen_c = spawn_children(&gen_a, 4);
+    for i in 0..2 {
+        gen_a[i] += gen_b[i];
+    }
+    for i in 2..SPAWN_INTERVAL {
+        gen_a[i] += gen_c[i];
+    }
+    println!("{:?} - {}", gen_a, gen_a.iter().sum::<u128>());
+    let soln2 = gen_a.iter().sum::<u128>();
+    println!("{}", soln2);
+
+    Ok((Ok(soln1), Ok(soln2 as i32)))
 }
 
-fn spawn_children(spawn_day: &i32, last_day: i32) -> Vec<i32> {
-    (spawn_day + SPAWN_TIMER..last_day)
-        .step_by(SPAWN_INTERVAL)
-        .collect::<Vec<i32>>()
+fn spawn_children(
+    flounders: &[Flounder; SPAWN_INTERVAL],
+    days: usize,
+) -> [Flounder; SPAWN_INTERVAL] {
+    let mut new_flounders = [0; SPAWN_INTERVAL];
+    for (i, f) in flounders.iter().enumerate().take(days) {
+        let j = (i + 2) % SPAWN_INTERVAL;
+        new_flounders[j] = *f;
+        println!(
+            "day {} - {:?} - {}",
+            i,
+            new_flounders,
+            new_flounders.iter().sum::<u128>()
+        );
+    }
+    return new_flounders;
 }
