@@ -1,4 +1,4 @@
-pub type Solution = Result<i32, Error>;
+pub type Solution = Result<i64, Error>;
 
 #[derive(Debug)]
 pub enum Error {

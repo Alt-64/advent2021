@@ -8,7 +8,7 @@ pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
     Ok((part1(&report), part2(&report)))
 }
 
-pub fn part1(report: &Vec<Vec<bool>>) -> Result<i32, Error> {
+pub fn part1(report: &Vec<Vec<bool>>) -> Result<i64, Error> {
     if let Some(row) = report.first() {
         let common_bits: Vec<bool> = (0..row.len())
             .map(|i| get_column(report.iter(), i))
@@ -26,7 +26,7 @@ pub fn part1(report: &Vec<Vec<bool>>) -> Result<i32, Error> {
     }
 }
 
-pub fn part2(report: &Vec<Vec<bool>>) -> Result<i32, Error> {
+pub fn part2(report: &Vec<Vec<bool>>) -> Result<i64, Error> {
     let o2_rating = chem_rating(report, &|col| most_common_bit(col));
     let co2_rating = chem_rating(report, &|col| !most_common_bit(col));
 
@@ -47,17 +47,17 @@ fn most_common_bit(bits: &[bool]) -> bool {
     return ham_weight >= bits.len() / 2;
 }
 
-fn greek_rate(row: &[bool]) -> i32 {
+fn greek_rate(row: &[bool]) -> i64 {
     let bitstring = row
         .iter()
-        .map(|&b| i32::from(b).to_string())
+        .map(|&b| i64::from(b).to_string())
         .collect::<Vec<String>>()
         .join("");
 
-    return i32::from_str_radix(bitstring.as_str(), 2).unwrap();
+    return i64::from_str_radix(bitstring.as_str(), 2).unwrap();
 }
 
-fn chem_rating<'a>(report: &Vec<Vec<bool>>, calc_mode: &dyn Fn(&[bool]) -> bool) -> i32 {
+fn chem_rating<'a>(report: &Vec<Vec<bool>>, calc_mode: &dyn Fn(&[bool]) -> bool) -> i64 {
     let mut rows: Vec<&[bool]> = report.iter().map(Vec::as_slice).collect();
     if let Some(row) = rows.first() {
         for i in 0..row.len() {

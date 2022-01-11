@@ -4,14 +4,14 @@ use std::fs::read_to_string;
 use crate::types::{Error, Solution};
 
 struct SubPos {
-    horizontal: i32,
-    depth: i32,
-    aim: i32,
+    horizontal: i64,
+    depth: i64,
+    aim: i64,
 }
 
 struct SubCmd<'a> {
     direction: &'a str,
-    distance: i32,
+    distance: i64,
 }
 
 pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
@@ -21,41 +21,6 @@ pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
         maneuver_sub(&commands, part1_controls),
         maneuver_sub(&commands, part2_controls),
     ))
-}
-
-fn maneuver_sub(
-    commands: &[&str],
-    controls: fn(SubPos, SubCmd) -> Result<SubPos, Error>,
-) -> Result<i32, Error> {
-    let final_pos: SubPos = commands
-        .iter()
-        .map(parse_command)
-        .collect::<Result<Vec<SubCmd>, Error>>()?
-        .into_iter()
-        .try_fold(
-            SubPos {
-                horizontal: 0,
-                depth: 0,
-                aim: 0,
-            },
-            controls,
-        )?;
-
-    Ok(final_pos.horizontal * final_pos.depth)
-}
-
-fn parse_command<'a>(cmd_str: &&'a str) -> Result<SubCmd<'a>, Error> {
-    let cmd_strs = cmd_str.split(" ").collect::<Vec<&str>>();
-    if cmd_strs.len() < 2 {
-        return Err(Error::Malformed(cmd_str.to_string()));
-    }
-    let direction = cmd_strs[0];
-    let distance = cmd_strs[1].parse::<i32>()?;
-
-    Ok(SubCmd {
-        direction,
-        distance,
-    })
 }
 
 fn part1_controls(acc: SubPos, cmd: SubCmd) -> Result<SubPos, Error> {
@@ -93,4 +58,39 @@ fn part2_controls(acc: SubPos, cmd: SubCmd) -> Result<SubPos, Error> {
         }),
         _ => Err(Error::Unrecognized(cmd.direction.to_string())),
     }
+}
+
+fn maneuver_sub(
+    commands: &[&str],
+    controls: fn(SubPos, SubCmd) -> Result<SubPos, Error>,
+) -> Result<i64, Error> {
+    let final_pos: SubPos = commands
+        .iter()
+        .map(parse_command)
+        .collect::<Result<Vec<SubCmd>, Error>>()?
+        .into_iter()
+        .try_fold(
+            SubPos {
+                horizontal: 0,
+                depth: 0,
+                aim: 0,
+            },
+            controls,
+        )?;
+
+    Ok(final_pos.horizontal * final_pos.depth)
+}
+
+fn parse_command<'a>(cmd_str: &&'a str) -> Result<SubCmd<'a>, Error> {
+    let cmd_strs = cmd_str.split(" ").collect::<Vec<&str>>();
+    if cmd_strs.len() < 2 {
+        return Err(Error::Malformed(cmd_str.to_string()));
+    }
+    let direction = cmd_strs[0];
+    let distance = cmd_strs[1].parse::<i64>()?;
+
+    Ok(SubCmd {
+        direction,
+        distance,
+    })
 }

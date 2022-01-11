@@ -8,12 +8,12 @@ use {
 
 #[derive(Clone, Copy)]
 struct BingoSpace {
-    value: i32,
+    value: i64,
     marked: bool,
 }
 
 impl BingoSpace {
-    fn new(value: i32) -> Self {
+    fn new(value: i64) -> Self {
         BingoSpace {
             value,
             marked: false,
@@ -46,20 +46,20 @@ pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
     ))
 }
 
-fn part1(curr_draw: i32, boards: &[Board]) -> Option<i32> {
+fn part1(curr_draw: i64, boards: &[Board]) -> Option<i64> {
     boards
         .iter()
         .find(|&b| won(b))
         .and_then(|winning_board| Some(calc_score(winning_board, curr_draw)))
 }
 
-fn part2(curr_draw: i32, boards: &[Board]) -> Option<i32> {
+fn part2(curr_draw: i64, boards: &[Board]) -> Option<i64> {
     let remaining_board = &boards.first()?;
     let score = calc_score(remaining_board, curr_draw);
     return Some(score);
 }
 
-fn mark_board(board: &mut Board, x: i32) {
+fn mark_board(board: &mut Board, x: i64) {
     for row in board {
         for space in row {
             if space.value == x {
@@ -88,7 +88,7 @@ fn completed(spaces: &[BingoSpace]) -> bool {
     spaces.iter().fold(true, |acc, space| acc && space.marked)
 }
 
-fn calc_score(board: &Board, last_draw: i32) -> i32 {
+fn calc_score(board: &Board, last_draw: i64) -> i64 {
     let sum = board.iter().fold(0, |acc, curr| {
         acc + curr.iter().fold(
             0,
@@ -99,13 +99,13 @@ fn calc_score(board: &Board, last_draw: i32) -> i32 {
     sum * last_draw
 }
 
-fn read_input(path: &str) -> Result<(Vec<i32>, Vec<Board>), Error> {
+fn read_input(path: &str) -> Result<(Vec<i64>, Vec<Board>), Error> {
     let input = read_to_string(path)?;
     let lines: Vec<&str> = input.split("\n").collect();
     let draws = lines[0]
         .split(",")
         .map(|s| s.parse())
-        .collect::<Result<Vec<i32>, _>>()?;
+        .collect::<Result<Vec<i64>, _>>()?;
     let boards = lines[2..lines.len() - 1]
         .split(|s| *s == "")
         .map(read_input_board)

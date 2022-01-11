@@ -25,7 +25,7 @@ pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
     Ok((Ok(soln1), Ok(soln2)))
 }
 
-fn part1(lines: &Vec<Line>, canvas: &mut Vec<Vec<u8>>) -> i32 {
+fn part1(lines: &Vec<Line>, canvas: &mut Vec<Vec<u8>>) -> i64 {
     for line in lines.iter() {
         line.draw_horiz(canvas);
         line.draw_vert(canvas);
@@ -33,19 +33,19 @@ fn part1(lines: &Vec<Line>, canvas: &mut Vec<Vec<u8>>) -> i32 {
     count_overlaps(canvas)
 }
 
-fn part2(lines: &Vec<Line>, canvas: &mut Vec<Vec<u8>>) -> i32 {
+fn part2(lines: &Vec<Line>, canvas: &mut Vec<Vec<u8>>) -> i64 {
     for line in lines.iter() {
         line.draw_diag(canvas);
     }
     count_overlaps(canvas)
 }
 
-fn count_overlaps(canvas: &Vec<Vec<u8>>) -> i32 {
+fn count_overlaps(canvas: &Vec<Vec<u8>>) -> i64 {
     canvas
         .iter()
         .flatten()
         .filter(|&&overlap_count| overlap_count >= 2)
-        .count() as i32
+        .count() as i64
 }
 
 fn read_input(path: &str) -> Result<Vec<Line>, Error> {
@@ -70,7 +70,7 @@ fn read_input_line(line_str: &str) -> Result<Line, Error> {
 }
 
 fn read_input_point(point_str: &str) -> Result<Point, Error> {
-    let mut coords = point_str.split(',').map(str::parse::<i32>);
+    let mut coords = point_str.split(',').map(str::parse::<i64>);
 
     let x = coords
         .next()
@@ -84,18 +84,18 @@ fn read_input_point(point_str: &str) -> Result<Point, Error> {
 
 #[derive(Clone, Copy)]
 struct Point {
-    x: i32,
-    y: i32,
+    x: i64,
+    y: i64,
 }
 
 struct Line {
-    x_lower: i32,
-    x_upper: i32,
-    y_lower: i32,
-    y_upper: i32,
-    a: i32,
-    b: i32,
-    c: i32,
+    x_lower: i64,
+    x_upper: i64,
+    y_lower: i64,
+    y_upper: i64,
+    a: i64,
+    b: i64,
+    c: i64,
 }
 
 impl Debug for Line {
@@ -125,11 +125,11 @@ impl Line {
         }
     }
 
-    fn solve_for_x(&self, y: i32) -> i32 {
+    fn solve_for_x(&self, y: i64) -> i64 {
         -(self.b * y + self.c) / self.a
     }
 
-    fn solve_for_y(&self, x: i32) -> i32 {
+    fn solve_for_y(&self, x: i64) -> i64 {
         -(self.a * x + self.c) / self.b
     }
 
