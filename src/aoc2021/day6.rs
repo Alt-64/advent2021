@@ -1,83 +1,74 @@
-use std::fs::read_to_string;
+use std::{fs::read_to_string, num::ParseIntError};
 
 use crate::types::{Error, Solution};
 
 const SPAWN_INTERVAL: usize = 7;
 
-type Flounder = u128;
+type Flounder = i64;
 
 pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
-    let mut gen_a: [Flounder; SPAWN_INTERVAL] = read_to_string(path)?
+    let mut spawning: [Flounder; SPAWN_INTERVAL] = [0; SPAWN_INTERVAL];
+    let mut flounders: [Flounder; SPAWN_INTERVAL] = read_to_string(path)?
         .split(',')
-        .map(|timer| Ok(timer.trim().parse::<usize>()?))
-        .collect::<Result<Vec<usize>, Error>>()?
+        .map(str::trim)
+        .map(str::parse)
+        .collect::<Result<Vec<usize>, ParseIntError>>()?
         .into_iter()
         .fold([0; SPAWN_INTERVAL], |mut acc, f| {
             acc[f] += 1;
             return acc;
         });
 
-    let mut soln1 = 0;
-    let generations = 256 / SPAWN_INTERVAL;
-    let remainder = 256 % SPAWN_INTERVAL;
-    println!("{}:{}", generations, remainder);
-    // for i in 0..generations {
-    //     println!("{:?} - {}", flounders, flounders.iter().sum::<u128>());
-    //     flounders = spawn_children(&flounders);
-    //     if i == 80 {
-    //         soln1 = flounders.iter().sum::<u128>() as i32;
-    //     }
-    // }
+    for i in 0..80 {
+        spawn(i, &mut flounders, &mut spawning);
+    }
+    let soln1 = count_flounders(&flounders, &spawning);
+    for i in 80..256 {
+        spawn(i, &mut flounders, &mut spawning);
+    }
+    let soln2 = count_flounders(&flounders, &spawning);
 
-    println!("{:?} - {}", gen_a, gen_a.iter().sum::<u128>());
-    let gen_b = [0; SPAWN_INTERVAL];
-    let gen_c = spawn_children(&gen_a, 7);
-    for i in 2..SPAWN_INTERVAL {
-        gen_a[i] += gen_b[i];
-    }
-    for i in 2..SPAWN_INTERVAL {
-        gen_a[i] += gen_c[i];
-    }
-
-    println!("{:?} - {}", gen_a, gen_a.iter().sum::<u128>());
-    let gen_b = gen_c;
-    let gen_c = spawn_children(&gen_a, 7);
-    for i in 0..2 {
-        gen_a[i] += gen_b[i];
-    }
-    for i in 2..SPAWN_INTERVAL {
-        gen_a[i] += gen_c[i];
-    }
-    println!("{:?} - {}", gen_a, gen_a.iter().sum::<u128>());
-    let gen_b = gen_c;
-    let gen_c = spawn_children(&gen_a, 4);
-    for i in 0..2 {
-        gen_a[i] += gen_b[i];
-    }
-    for i in 2..SPAWN_INTERVAL {
-        gen_a[i] += gen_c[i];
-    }
-    println!("{:?} - {}", gen_a, gen_a.iter().sum::<u128>());
-    let soln2 = gen_a.iter().sum::<u128>();
-    println!("{}", soln2);
-
-    Ok((Ok(soln1), Ok(soln2 as i32)))
+    Ok((Ok(soln1 as i64), Ok(soln2 as i64)))
 }
 
-fn spawn_children(
+fn count_flounders(
     flounders: &[Flounder; SPAWN_INTERVAL],
-    days: usize,
-) -> [Flounder; SPAWN_INTERVAL] {
-    let mut new_flounders = [0; SPAWN_INTERVAL];
-    for (i, f) in flounders.iter().enumerate().take(days) {
-        let j = (i + 2) % SPAWN_INTERVAL;
-        new_flounders[j] = *f;
-        println!(
-            "day {} - {:?} - {}",
-            i,
-            new_flounders,
-            new_flounders.iter().sum::<u128>()
-        );
-    }
-    return new_flounders;
+    spawning: &[Flounder; SPAWN_INTERVAL],
+) -> Flounder {
+    flounders
+        .into_iter()
+        .zip(spawning)
+        .map(|(s, f)| s + f)
+        .sum::<Flounder>()
+}
+
+fn print_status(
+    day: usize,
+    flounders: &[Flounder; SPAWN_INTERVAL],
+    spawning: &[Flounder; SPAWN_INTERVAL],
+) {
+    println!(
+        "day {} | {}\n{:?}\n{:?}\n",
+        day,
+        flounders
+            .iter()
+            .zip(spawning)
+            .map(|(s, f)| s + f)
+            .sum::<Flounder>(),
+        flounders,
+        spawning,
+    );
+}
+
+fn spawn(
+    day: usize,
+    flounders: &mut [Flounder; SPAWN_INTERVAL],
+    spawning: &mut [Flounder; SPAWN_INTERVAL],
+) {
+    let f = day % 7;
+    spawning[f] = flounders[f];
+
+    let e = (day + 5) % 7;
+    flounders[f] += spawning[e];
+    spawning[e] = 0;
 }
