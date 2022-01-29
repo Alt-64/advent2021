@@ -1,6 +1,7 @@
 #![feature(custom_test_frameworks)]
 #![feature(iterator_try_reduce)]
-use std::{env, os::unix::prelude::CommandExt};
+#![feature(hash_drain_filter)]
+use std::{env, time::Instant};
 
 use types::{Error, Solution};
 
@@ -14,30 +15,34 @@ fn main() {
         "input_day"
     };
     [
-        aoc2021::day1::solver,
-        aoc2021::day2::solver,
-        aoc2021::day3::solver,
-        aoc2021::day4::solver,
-        aoc2021::day5::solver,
-        aoc2021::day6::solver,
-        aoc2021::day7::solver,
+        aoc2021::day1::solve,
+        aoc2021::day2::solve,
+        aoc2021::day3::solve,
+        aoc2021::day4::solve,
+        aoc2021::day5::solve,
+        aoc2021::day6::solve,
+        aoc2021::day7::solve,
+        aoc2021::day8::solve,
     ]
     .iter()
     .enumerate()
     .map(|(day, solver)| {
         let day = day + 1;
         let input_path = format!("puzzle_input/{}{}.txt", filename, day);
+        let now = Instant::now();
         let result = solver(&input_path);
-        print_results(day, result);
+        let elapsed = now.elapsed().as_millis();
+        print_results(day, result, elapsed);
     })
     .for_each(drop);
 }
 
-fn print_results(day: usize, result: Result<(Solution, Solution), Error>) {
+fn print_results(day: usize, result: Result<(Solution, Solution), Error>, time: u128) {
     println!("== Day {} ==", day);
     if let Ok((soln1, soln2)) = result {
         println!("Part 1: {:?}", soln1);
         println!("Part 2: {:?}", soln2);
+        println!("Time:   {}ms", time);
     } else {
         println!("Encountered an Error: {:?}", result);
     }

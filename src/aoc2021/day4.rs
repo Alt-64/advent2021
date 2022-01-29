@@ -23,7 +23,7 @@ impl BingoSpace {
 
 type Board = [[BingoSpace; 5]; 5];
 
-pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
+pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
     let (draws, mut boards) = read_input(path)?;
     let mut soln1 = None;
     let mut soln2 = None;
@@ -47,10 +47,12 @@ pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
 }
 
 fn part1(curr_draw: i64, boards: &[Board]) -> Option<i64> {
-    boards
-        .iter()
-        .find(|&b| won(b))
-        .and_then(|winning_board| Some(calc_score(winning_board, curr_draw)))
+    for b in boards {
+        if won(b) {
+            return Some(calc_score(b, curr_draw));
+        }
+    }
+    return None;
 }
 
 fn part2(curr_draw: i64, boards: &[Board]) -> Option<i64> {
@@ -101,15 +103,15 @@ fn calc_score(board: &Board, last_draw: i64) -> i64 {
 
 fn read_input(path: &str) -> Result<(Vec<i64>, Vec<Board>), Error> {
     let input = read_to_string(path)?;
-    let lines: Vec<&str> = input.split("\n").collect();
-    let draws = lines[0]
-        .split(",")
-        .map(|s| s.parse())
-        .collect::<Result<Vec<i64>, _>>()?;
-    let boards = lines[2..lines.len() - 1]
+    let lines: Vec<&str> = input.split('\n').collect();
+    let draws: Vec<i64> = lines[0]
+        .split(',')
+        .map(str::parse)
+        .collect::<Result<_, _>>()?;
+    let boards: Vec<Board> = lines[2..lines.len() - 1]
         .split(|s| *s == "")
         .map(read_input_board)
-        .collect::<Result<Vec<Board>, _>>()?;
+        .collect::<Result<_, _>>()?;
     Ok((draws, boards))
 }
 
@@ -117,7 +119,6 @@ fn read_input_board(text: &[&str]) -> Result<Board, Error> {
     text.iter()
         .map(|line| read_input_board_line(*line))
         .collect::<Result<Vec<[BingoSpace; 5]>, _>>()?
-        .as_slice()
         .try_into()
         .map_err(Error::from)
 }
@@ -129,7 +130,6 @@ fn read_input_board_line(line: &str) -> Result<[BingoSpace; 5], Error> {
             Ok(BingoSpace::new(value))
         })
         .collect::<Result<Vec<BingoSpace>, Error>>()?
-        .as_slice()
         .try_into()
         .map_err(Error::from)
 }

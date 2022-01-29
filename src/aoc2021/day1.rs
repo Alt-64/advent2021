@@ -3,7 +3,7 @@ use std::fs::read_to_string;
 
 use crate::types::{Error, Solution};
 
-pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
+pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
     let input = read_input(path)?;
     Ok((part1(&input), part2(&input)))
 }

@@ -14,7 +14,7 @@ struct SubCmd<'a> {
     distance: i64,
 }
 
-pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
+pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
     let input = read_to_string(path)?;
     let commands: Vec<&str> = input.split("\n").filter(|&cmd| cmd != "").collect();
     Ok((
@@ -84,7 +84,7 @@ fn maneuver_sub(
 fn parse_command<'a>(cmd_str: &&'a str) -> Result<SubCmd<'a>, Error> {
     let cmd_strs = cmd_str.split(" ").collect::<Vec<&str>>();
     if cmd_strs.len() < 2 {
-        return Err(Error::Malformed(cmd_str.to_string()));
+        return Err(Error::BadInput(cmd_str.to_string()));
     }
     let direction = cmd_strs[0];
     let distance = cmd_strs[1].parse::<i64>()?;

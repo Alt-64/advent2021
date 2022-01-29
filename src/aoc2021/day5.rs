@@ -3,7 +3,7 @@ use std::{fmt::Debug, fs::read_to_string};
 
 use crate::types::{Error, Solution};
 
-pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
+pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
     let lines: Vec<Line> = read_input(path)?;
 
     let mut x_max = 0;
@@ -61,10 +61,10 @@ fn read_input_line(line_str: &str) -> Result<Line, Error> {
 
     let a = points
         .next()
-        .ok_or(Error::Malformed(line_str.to_owned()))??;
+        .ok_or(Error::BadInput(line_str.to_owned()))??;
     let b = points
         .next()
-        .ok_or(Error::Malformed(line_str.to_owned()))??;
+        .ok_or(Error::BadInput(line_str.to_owned()))??;
 
     Ok(Line::from_points(a, b))
 }
@@ -74,10 +74,10 @@ fn read_input_point(point_str: &str) -> Result<Point, Error> {
 
     let x = coords
         .next()
-        .ok_or(Error::Malformed(point_str.to_owned()))??;
+        .ok_or(Error::BadInput(point_str.to_owned()))??;
     let y = coords
         .next()
-        .ok_or(Error::Malformed(point_str.to_owned()))??;
+        .ok_or(Error::BadInput(point_str.to_owned()))??;
 
     Ok(Point { x, y })
 }

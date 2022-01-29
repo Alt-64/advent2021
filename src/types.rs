@@ -5,9 +5,9 @@ pub enum Error {
     IOError(std::io::Error),
     ParseIntError(std::num::ParseIntError),
     ParseFloatError(std::num::ParseFloatError),
-    TryFromSliceError(std::array::TryFromSliceError),
+    TryFromVecError,
     Unrecognized(String),
-    Malformed(String),
+    BadInput(String),
     NoSolution,
 }
 
@@ -26,8 +26,13 @@ impl From<std::num::ParseFloatError> for Error {
         Error::ParseFloatError(e)
     }
 }
-impl From<std::array::TryFromSliceError> for Error {
-    fn from(e: std::array::TryFromSliceError) -> Self {
-        Error::TryFromSliceError(e)
+impl<T> From<Vec<T>> for Error {
+    fn from(e: Vec<T>) -> Self {
+        Error::TryFromVecError
+    }
+}
+impl FromIterator<std::num::ParseIntError> for Error {
+    fn from_iter<I: IntoIterator<Item = std::num::ParseIntError>>(iter: I) -> Self {
+        Error::TryFromVecError
     }
 }

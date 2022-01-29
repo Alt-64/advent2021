@@ -3,9 +3,11 @@ use std::{fs::read_to_string, ops::Index};
 
 use crate::types::{Error, Solution};
 
-pub fn solver(path: &str) -> Result<(Solution, Solution), Error> {
+pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
     let report = read_input(path)?;
-    Ok((part1(&report), part2(&report)))
+    let soln1 = part1(&report);
+    let soln2 = part2(&report);
+    Ok((soln1, soln2))
 }
 
 pub fn part1(report: &Vec<Vec<bool>>) -> Result<i64, Error> {
