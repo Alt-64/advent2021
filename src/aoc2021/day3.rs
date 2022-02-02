@@ -38,7 +38,7 @@ pub fn part2(report: &Vec<Vec<bool>>) -> Result<i64, Error> {
 pub fn get_column<'a, O, I, E>(rows: O, column_idx: usize) -> Vec<E>
 where
     O: Iterator<Item = &'a I> + 'a,            // Outer Collection (rows)
-    I: Index<usize, Output = E> + 'a + ?Sized, // Inner Collection (elements in row)
+    I: Index<usize, Output = E> + 'a + ?Sized, // Inner Collection (row)
     E: Copy,                                   // Element type
 {
     rows.map(|b| b[column_idx]).collect()
