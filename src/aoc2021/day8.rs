@@ -1,338 +1,241 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fs::read_to_string,
-    hash::Hash,
+    hash::{BuildHasherDefault, Hasher},
 };
+
+use num::traits::ops::overflowing::OverflowingAdd;
 
 use crate::types::{Error, Solution};
 
-type Pattern<const S: usize> = [char; S];
-type PatternSet<const S: usize, const P: usize> = [Pattern<S>; P];
+// Patterns are read in as strings of characters, but the information content
+// (which segments are lit) can be compressed down to a bitfield stored
+// as an integer.  The bitfield form reduces the memory footprint of the
+//patterns and makes comparing patterns simpler.
+//
+// To determine which pattern matches with a miswired pattern, we
+// examine how each pattern is unique within it's set.  If two patterns
+// within a set differ by a single segment being lit, the matching patterns
+// in the miswired set will also differ by a single segment, potentially
+// a different segment.  By counting the number of different segments between a
+// pattern and all the others in it's set, we have a representation of that
+// pattern that will match against at least one other pattern in the opposite
+// set.
+//
+// If there is just one match, the job is done, and we have a pair of matched
+// patterns.
+//
+// If there is more than one match, we must try to use one of the patterns that
+// did have a one-to-one match to identify a pair.  By carrying the ordering
+// of the patterns in the set to the set of differences, we can recognize which
+// pattern
 
-type SegmentWiring = HashMap<char, HashSet<char>>;
-type PatternWiring<'b, const S: usize> = HashMap<&'b Pattern<S>, HashSet<&'b Pattern<S>>>;
+type Segment = usize;
+type Pattern = usize;
 
-type Entry<const S: usize, const P: usize, const O: usize> = (PatternSet<S, P>, PatternSet<S, O>);
-type Rewiring<const S: usize> = HashMap<Pattern<S>, Pattern<S>>;
+type Entry<const P: usize, const O: usize> = ([Pattern; P], [Pattern; O]);
 
 // Values are index-mapped, e.g. segment pattern for 7 is CORRECT_PATTERNS[7]
-const CORRECT_PATTERNS: [Pattern<7>; 10] = [
-    ['a', 'b', 'c', 'e', 'f', 'g', '\0'],
-    ['c', 'f', '\0', '\0', '\0', '\0', '\0'],
-    ['a', 'c', 'd', 'e', 'g', '\0', '\0'],
-    ['a', 'c', 'd', 'f', 'g', '\0', '\0'],
-    ['b', 'c', 'd', 'f', '\0', '\0', '\0'],
-    ['a', 'b', 'd', 'f', 'g', '\0', '\0'],
-    ['a', 'b', 'd', 'e', 'f', 'g', '\0'],
-    ['a', 'c', 'f', '\0', '\0', '\0', '\0'],
-    ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
-    ['a', 'b', 'c', 'd', 'f', 'g', '\0'],
+const CORRECT_PATTERNS: [Pattern; 10] = [
+    0b1110111, 0b0100100, 0b1011101, 0b1101101, 0b0101110, 0b1101011, 0b1111011, 0b0100101,
+    0b1111111, 0b1101111,
 ];
 
-fn read_seven_segment(pattern: Pattern<7>) -> Result<char, Error> {
-    let val = match pattern.len() {
-        2 => '1',
-        3 => '7',
-        4 => '4',
-        5 if pattern.contains(&'b') => '5',
-        5 if pattern.contains(&'e') => '2',
-        5 => '3',
-        6 if !pattern.contains(&'d') => '0',
-        6 if pattern.contains(&'c') => '9',
-        6 => '6',
-        7 => '7',
-        _ => return Err(Error::Unrecognized(pattern.iter().cloned().collect())),
-    };
-    Ok(val)
+fn read_seven_segment(pattern: Pattern) -> Result<char, Error> {
+    Ok(match pattern {
+        0b1110111 => '0',
+        0b0100100 => '1',
+        0b1011101 => '2',
+        0b1101101 => '3',
+        0b0101110 => '4',
+        0b1101011 => '5',
+        0b1111011 => '6',
+        0b0100101 => '7',
+        0b1111111 => '8',
+        0b1101111 => '9',
+        _ => return Err(Error::Unrecognized(pattern.to_string())),
+    })
+}
+
+// a -> 1, b -> 2, c -> 4, d -> 8
+fn bit_segment_from(char_segment: char) -> Segment {
+    let x = (char_segment as usize) - ('a' as usize);
+    1 << x
 }
 
 pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
     let input = read_to_string(path)?;
-    let entries: Vec<Entry<7, 10, 4>> = input
+    let entries: Vec<Entry<10, 4>> = input
         .split('\n')
         .filter(|&c| c != "")
         .map(str::trim)
         .map(read_line)
         .collect::<Result<_, Error>>()?;
 
+    let wire_hash_builder = BuildHasherDefault::<WireHasher>::default();
+    let cor_hashes = CORRECT_PATTERNS.map(|pattern| get_diffs_for(pattern, CORRECT_PATTERNS));
+    let mut cor_pat_hashmap =
+        HashMap::with_capacity_and_hasher(CORRECT_PATTERNS.len(), wire_hash_builder);
+    for (k, v) in cor_hashes.zip(CORRECT_PATTERNS) {
+        println!("{:?}", k);
+        cor_pat_hashmap.insert(k, v);
+    }
+
     let mut soln1: i64 = 0;
     let mut soln2: i64 = 0;
+
     for entry in entries {
-        let digits = interpret(entry, &CORRECT_PATTERNS)?
-            .into_iter()
-            .map(read_seven_segment)
+        let (incor_patterns, output_patterns) = entry;
+        let inferences = output_patterns.map(|pattern| {
+            first_round_inference::<10, 4>(pattern, incor_patterns, &cor_pat_hashmap)
+                .map(|inferred_pattern| (pattern, inferred_pattern))
+        });
+
+        let inferred_pairs = inferences.iter().flatten().cloned().collect::<Vec<_>>();
+
+        let digits = inferences
+            .iter()
+            .enumerate()
+            .map(|(i, pair)| {
+                pair.or_else(|| {
+                    second_round_inference(i, &inferred_pairs, CORRECT_PATTERNS, incor_patterns)
+                })
+                .ok_or(Error::NoSolution)
+                .map(|(_incorrect, inferred)| read_seven_segment(inferred))?
+            })
             .collect::<Result<String, _>>()?;
 
-        soln1 = part1(soln1, &digits);
-        soln2 = part2(soln2, &digits);
+        soln1 += part1(&digits);
+        soln2 += part2(&digits);
     }
 
     Ok((Ok(soln1), Ok(soln2)))
 }
 
-fn part1(mut soln1: i64, digits: &str) -> i64 {
-    for digit in digits.chars() {
-        match digit {
-            '1' | '4' | '7' | '8' => soln1 += 1,
-            _ => (),
+fn first_round_inference<const P: usize, const O: usize>(
+    pattern: Pattern,
+    incor_patterns: [Pattern; P],
+    cor_pat_hashmap: &HashMap<[u32; P], usize, BuildHasherDefault<WireHasher>>,
+) -> Option<Pattern> {
+    let hash = get_diffs_for(pattern, incor_patterns);
+    let asdf = cor_pat_hashmap.get(&hash).cloned();
+    println!("{hash:?}\n{asdf:?}");
+    asdf
+}
+
+fn second_round_inference<const P: usize>(
+    i: usize,
+    inferred_pairs: &[(Pattern, Pattern)],
+    cor_patterns: [Pattern; P],
+    incor_patterns: [Pattern; P],
+) -> Option<(Pattern, Pattern)> {
+    for (incor_pattern, inferred_pattern) in inferred_pairs {
+        let incor_diffs = get_diffs_for(*incor_pattern, incor_patterns);
+        let cor_diffs = get_diffs_for(*inferred_pattern, cor_patterns);
+        let matching_indices = cor_diffs
+            .into_iter()
+            .enumerate()
+            .filter(|(_, d)| *d == incor_diffs[i])
+            .map(|(j, _)| j)
+            .collect::<Vec<_>>();
+        if matching_indices.len() == 1 {
+            let j = matching_indices[0];
+            return Some((*incor_pattern, CORRECT_PATTERNS[j]));
         }
     }
-    soln1
-}
-
-fn part2(soln2: i64, digits: &str) -> i64 {
-    // digits *will* be parsable, since it was built internally.
-    soln2 + digits.parse::<i64>().unwrap()
-}
-
-fn interpret<const S: usize, const P: usize, const O: usize>(
-    entry: Entry<S, P, O>,
-    cor_set: &PatternSet<S, P>,
-) -> Result<PatternSet<S, O>, Error> {
-    let (incor_set, output) = entry;
-    let rewiring = determine_rewiring(incor_set, cor_set)?;
-    let intended_output = output.map(|o| *rewiring.get(&o).unwrap());
-    Ok(intended_output)
-}
-
-fn determine_rewiring<'b, const S: usize, const P: usize>(
-    incor_set: PatternSet<S, P>,
-    cor_set: &'b PatternSet<S, P>,
-) -> Result<Rewiring<S>, Error> {
-    let mut seg_wiring = SegmentWiring::new_wiring(&cor_set, &incor_set);
-    let mut pat_wiring = PatternWiring::new_wiring(&cor_set, &incor_set);
-
-    let mut changed: bool;
-    loop {
-        Rewirable::<_, _, S>::print(&seg_wiring);
-        pat_wiring.print();
-        if let Some(res) = rewire(&seg_wiring, &pat_wiring) {
-            return res;
-        }
-        changed = seg_wiring.trim(&pat_wiring) || pat_wiring.trim(&seg_wiring);
-        if !changed {
-            // No more changes could be inferred, therefore it is impossible to
-            // determine the correct wiring
-            return Err(Error::NoSolution);
-        }
-    }
-}
-
-fn rewire<const S: usize>(
-    seg_wiring: &SegmentWiring,
-    pat_wiring: &PatternWiring<S>,
-) -> Option<Result<Rewiring<S>, Error>> {
     None
 }
 
-trait Rewirable<'a, T, C, const S: usize>
-where
-    Self: Sized + FromIterator<(T, HashSet<T>)>,
-    T: Eq + Hash + Copy,
-    C: Eq + Hash + Copy,
-{
-    fn print(&self);
-
-    fn get_nodes<const P: usize>(incor_set: &'a PatternSet<S, P>) -> HashSet<T>;
-    fn get_options_for<const P: usize>(node: T, cor_set: &'a PatternSet<S, P>) -> HashSet<T>;
-
-    fn new_wiring<const P: usize>(
-        cor_set: &'a PatternSet<S, P>,
-        incor_set: &'a PatternSet<S, P>,
-    ) -> Self {
-        Self::get_nodes(incor_set)
-            .into_iter()
-            .map(|item| (item, Self::get_options_for(item, cor_set)))
-            .collect()
-    }
-
-    fn connection_exists_for(node: &T, complement_node: &C) -> bool;
-
-    fn iter_edges<'b>(&'b self) -> Box<dyn Iterator<Item = (&'b T, &'b HashSet<T>)> + 'b>;
-    fn iter_mut_edges<'b>(
-        &'b mut self,
-    ) -> Box<dyn Iterator<Item = (&'b T, &'b mut HashSet<T>)> + 'b>;
-
-    // Every incor_seg in all incor_pats must be pairable to a cor_seg in the
-    // cor_pat.
-    // Conversely, any incor_seg not in incor_pat cannot pair with any cor_segs in cor_pat.
-    // This function combs through the graph in self and compares it with the
-    // complement graph to trim wiring possibilies from self following the rules
-    // described above.
-    fn trim<Complement: Rewirable<'a, C, T, S>>(&mut self, complement_wiring: &Complement) -> bool {
-        let mut changed = false;
-        for (incor_comp, cor_comps) in complement_wiring.iter_edges() {
-            if cor_comps.len() != 1 {
-                continue;
-            }
-            let cor_comp = cor_comps.iter().next().unwrap();
-
-            for (&incor_node, cor_nodes) in self.iter_mut_edges() {
-                let untrimmed_len = cor_nodes.len();
-
-                let connected = Self::connection_exists_for(&incor_node, &incor_comp);
-                cor_nodes.drain_filter(|cor_node| {
-                    connected != Complement::connection_exists_for(cor_comp, cor_node)
-                });
-
-                let trimmed_len = cor_nodes.len();
-                changed = changed || untrimmed_len != trimmed_len;
-            }
-        }
-        changed
-    }
-}
-
-impl<'a, const S: usize> Rewirable<'a, char, &'a Pattern<S>, S> for SegmentWiring {
-    fn print(&self) {
-        for (incor_seg, cor_segs) in self {
-            println!("{} -> {:?}", incor_seg, cor_segs);
+fn part1(digits: &str) -> i64 {
+    let mut acc = 0;
+    for digit in digits.chars() {
+        match digit {
+            '1' | '4' | '7' | '8' => acc += 1,
+            _ => (),
         }
     }
-
-    fn get_nodes<const P: usize>(incor_set: &'a PatternSet<S, P>) -> HashSet<char> {
-        HashSet::from_iter(
-            incor_set
-                .iter()
-                .map(|pattern| pattern.get_segments())
-                .flatten()
-                .cloned(),
-        )
-    }
-
-    fn iter_edges<'b>(&'b self) -> Box<dyn Iterator<Item = (&'b char, &'b HashSet<char>)> + 'b> {
-        Box::new(self.iter())
-    }
-
-    fn iter_mut_edges<'b>(
-        &'b mut self,
-    ) -> Box<dyn Iterator<Item = (&'b char, &'b mut HashSet<char>)> + 'b> {
-        Box::new(self.iter_mut())
-    }
-
-    fn get_options_for<const P: usize>(
-        segment: char,
-        cor_set: &'a PatternSet<S, P>,
-    ) -> HashSet<char> {
-        let poss_lengths = get_segment_poss_lengths(cor_set, segment);
-        cor_set
-            .iter()
-            .map(|pattern| pattern.get_segments())
-            .filter(|segments| poss_lengths.contains(&segments.len()))
-            .flatten()
-            .cloned()
-            .collect()
-    }
-
-    fn connection_exists_for(segment: &char, pattern: &&'a Pattern<S>) -> bool {
-        pattern.contains(segment)
-    }
+    acc
 }
 
-impl<'a, const S: usize> Rewirable<'a, &'a Pattern<S>, char, S> for PatternWiring<'a, S> {
-    fn print(&self) {
-        for (incor_pat, cor_pats) in self {
-            println!("{} -> ", String::from_iter(incor_pat.get_segments()));
-            for cor_pat in cor_pats {
-                println!("\t{}", String::from_iter(cor_pat.get_segments()));
-            }
-        }
-    }
-
-    fn get_nodes<const P: usize>(incor_set: &'a PatternSet<S, P>) -> HashSet<&'a Pattern<S>> {
-        HashSet::from_iter(incor_set.into_iter())
-    }
-
-    fn iter_edges<'b>(
-        &'b self,
-    ) -> Box<dyn Iterator<Item = (&'b &'a Pattern<S>, &'b HashSet<&'a Pattern<S>>)> + 'b> {
-        Box::new(self.iter())
-    }
-
-    fn iter_mut_edges<'b>(
-        &'b mut self,
-    ) -> Box<dyn Iterator<Item = (&'b &'a Pattern<S>, &'b mut HashSet<&'a Pattern<S>>)> + 'b> {
-        Box::new(self.iter_mut())
-    }
-
-    fn get_options_for<const P: usize>(
-        pattern: &'a Pattern<S>,
-        cor_set: &'a PatternSet<S, P>,
-    ) -> HashSet<&'a Pattern<S>> {
-        let length = pattern.get_segments().len();
-        cor_set
-            .iter()
-            .filter(|&pattern| pattern.get_segments().len() == length)
-            .collect()
-    }
-
-    fn connection_exists_for(pattern: &&'a Pattern<S>, segment: &char) -> bool {
-        pattern.contains(segment)
-    }
+fn part2(digits: &str) -> i64 {
+    // digits *will* be parsable, since it was built internally.
+    digits.parse::<i64>().unwrap()
 }
 
-fn get_segment_poss_lengths<const S: usize, const P: usize>(
-    pattern_set: &PatternSet<S, P>,
-    segment: char,
-) -> HashSet<usize> {
-    pattern_set
-        .iter()
-        .filter_map(|&pattern| {
-            if pattern.contains(&segment) {
-                Some(pattern.get_segments().len())
-            } else {
-                None
-            }
-        })
-        .collect()
-}
-
-fn read_line<'a, const S: usize, const P: usize, const O: usize>(
-    line: &'a str,
-) -> Result<Entry<S, P, O>, Error> {
+fn read_line<'a, const P: usize, const O: usize>(line: &'a str) -> Result<Entry<P, O>, Error> {
     let mut elts = line.split('|');
     let mut get_values = || elts.next().ok_or(Error::BadInput(line.to_owned()));
 
-    let patterns: PatternSet<S, P> = read_words(get_values()?)?;
-    let outputs: PatternSet<S, O> = read_words(get_values()?)?;
+    let patterns = read_words(get_values()?)?;
+    let outputs = read_words(get_values()?)?;
     Ok((patterns, outputs))
 }
 
-fn read_words<const S: usize, const P: usize>(s: &str) -> Result<PatternSet<S, P>, Error> {
+fn read_words<const P: usize>(s: &str) -> Result<[usize; P], Error> {
     s.split_whitespace()
         .map(read_segments)
-        .collect::<Result<Vec<[char; S]>, Error>>()?
-        .try_into()
-        .map_err(Into::into)
+        .collect::<Option<Vec<usize>>>()
+        .map(TryInto::try_into)
+        .map(Result::ok)
+        .flatten()
+        .ok_or(Error::BadInput(s.to_string()))
 }
 
-fn read_segments<const S: usize>(word: &str) -> Result<[char; S], Error> {
-    let chars = word.chars().collect::<Vec<char>>();
-
-    if chars.len() > S {
-        return Err(Error::BadInput(word.to_string()));
-    }
-
-    let mut segments = ['\0'; S];
-    for (i, &c) in chars.iter().enumerate() {
-        segments[i] = c;
-    }
-
-    segments[0..chars.len()].sort();
-    Ok(segments)
+fn read_segments(word: &str) -> Option<usize> {
+    word.chars()
+        .map(bit_segment_from)
+        .reduce(|pattern, segment| pattern + segment)
 }
 
-trait SegmentPattern {
-    fn get_segments<'a>(&'a self) -> &'a [char];
+fn calc_pattern_hash<const P: usize>(pattern: Pattern, patterns: [Pattern; P]) -> u32 {
+    let diffs = get_diffs_for(pattern, patterns);
+    let hash = calc_diff_hash(&diffs);
+    return hash;
 }
 
-impl<const S: usize> SegmentPattern for Pattern<S> {
-    fn get_segments<'a>(&'a self) -> &'a [char] {
-        let length = self
-            .iter()
-            .enumerate()
-            .find_map(|(i, &segment)| if segment == '\0' { Some(i) } else { None })
-            .unwrap_or(self.len());
-        &self[0..length]
+fn get_diffs_for<const P: usize>(pattern: Pattern, patterns: [Pattern; P]) -> [u32; P] {
+    let p1 = pattern;
+    patterns.map(|p2| p1 ^ p2).map(usize::count_ones)
+}
+
+fn calc_diff_hash(diffs: &[u32]) -> u32 {
+    let mut sum = 0;
+    for &x in diffs {
+        sum = sum.overflowing_add(&hash(x)).0;
     }
+    sum
+}
+
+#[derive(Default)]
+struct WireHasher {
+    state: u64,
+}
+
+impl Hasher for WireHasher {
+    fn finish(&self) -> u64 {
+        println!("{}", self.state);
+        self.state
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        // We'll only be writing u32s, i.e. chunks of 4 u8s
+        // print!("{:?}", u64::from(bytes);
+        let (chunks, _) = bytes.as_chunks::<4>();
+        for &chunk in chunks {
+            let x = u32::from_be_bytes(chunk);
+            let y = hash(x) as u64;
+            // We don't want the order of the u32s to matter, i.e. we want
+            // an association operation across the u32s.
+            self.state = self.state.overflowing_add(y).0;
+        }
+    }
+}
+
+fn hash(mut x: u32) -> u32 {
+    x ^= x >> 16;
+    x = x.overflowing_mul(0x7feb352d).0;
+    x ^= x >> 15;
+    x = x.overflowing_mul(0x846ca68b).0;
+    x ^= x >> 16;
+    return x;
 }

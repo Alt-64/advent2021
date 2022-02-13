@@ -1,6 +1,8 @@
 #![feature(custom_test_frameworks)]
 #![feature(iterator_try_reduce)]
 #![feature(hash_drain_filter)]
+#![feature(array_zip)]
+#![feature(slice_as_chunks)]
 use std::{env, time::Instant};
 
 use types::{Error, Solution};
@@ -39,12 +41,13 @@ fn main() {
 
 fn print_results(day: usize, result: Result<(Solution, Solution), Error>, time: u128) {
     println!("== Day {} ==", day);
-    if let Ok((soln1, soln2)) = result {
-        println!("Part 1: {:?}", soln1);
-        println!("Part 2: {:?}", soln2);
-        println!("Time:   {}ms", time);
-    } else {
-        println!("Encountered an Error: {:?}", result);
+    match result {
+        Ok((soln1, soln2)) => {
+            println!("Part 1: {:?}", soln1);
+            println!("Part 2: {:?}", soln2);
+        }
+        Err(e) => println!("Encountered an Error: {:?}", e),
     }
+    println!("Time:   {}ms", time);
     println!();
 }
