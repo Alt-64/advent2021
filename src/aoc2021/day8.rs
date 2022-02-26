@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    fs::read_to_string,
-    hash::{BuildHasherDefault, Hasher},
-};
+use std::{collections::HashMap, fs::read_to_string};
 
 use num::traits::ops::overflowing::OverflowingAdd;
 
@@ -11,24 +7,23 @@ use crate::types::{Error, Solution};
 // Patterns are read in as strings of characters, but the information content
 // (which segments are lit) can be compressed down to a bitfield stored
 // as an integer.  The bitfield form reduces the memory footprint of the
-//patterns and makes comparing patterns simpler.
+// patterns and makes comparing patterns a little easier.
 //
-// To determine which pattern matches with a miswired pattern, we
-// examine how each pattern is unique within it's set.  If two patterns
-// within a set differ by a single segment being lit, the matching patterns
-// in the miswired set will also differ by a single segment, potentially
-// a different segment.  By counting the number of different segments between a
-// pattern and all the others in it's set, we have a representation of that
-// pattern that will match against at least one other pattern in the opposite
-// set.
+// To match a pattern to a miswired pattern, we first determine how patterns
+// are unique within their set.  If two patterns within a set differ by a single
+// segment being lit, their matches in the miswired set will also differ
+// by a single segment, though probably a different segment.  If you take this
+// thought to it's logical extreme and count the number of different segments
+// between a single pattern and all the others in it's set, you'll get a
+// representation of that pattern that will match against at
+// least one other pattern in the opposite set.
 //
-// If there is just one match, the job is done, and we have a pair of matched
-// patterns.
+// If there is just one match, the job is done.  You can even infer some of the
+// other pattern pairings based on this 'diff-set' if you'd like.
 //
-// If there is more than one match, we must try to use one of the patterns that
-// did have a one-to-one match to identify a pair.  By carrying the ordering
-// of the patterns in the set to the set of differences, we can recognize which
-// pattern
+// If there is more than one match, we have to use one of the patterns that
+// did have a one-to-one match to infer a pairing.  If none exists, it is
+// impossible to determine a map from the wired set to the miswired set.
 
 type Segment = usize;
 type Pattern = usize;
@@ -72,14 +67,11 @@ pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
         .map(read_line)
         .collect::<Result<_, Error>>()?;
 
-    let wire_hash_builder = BuildHasherDefault::<WireHasher>::default();
-    let cor_hashes = CORRECT_PATTERNS.map(|pattern| get_diffs_for(pattern, CORRECT_PATTERNS));
-    let mut cor_pat_hashmap =
-        HashMap::with_capacity_and_hasher(CORRECT_PATTERNS.len(), wire_hash_builder);
-    for (k, v) in cor_hashes.zip(CORRECT_PATTERNS) {
-        println!("{:?}", k);
-        cor_pat_hashmap.insert(k, v);
-    }
+    let cor_hashes = CORRECT_PATTERNS.map(|pattern| {
+        let diffs = get_diffs_for(pattern, CORRECT_PATTERNS);
+        calc_diff_hash(diffs)
+    });
+    let cor_pat_hashmap = HashMap::from(cor_hashes.zip(CORRECT_PATTERNS));
 
     let mut soln1: i64 = 0;
     let mut soln2: i64 = 0;
@@ -115,12 +107,11 @@ pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
 fn first_round_inference<const P: usize, const O: usize>(
     pattern: Pattern,
     incor_patterns: [Pattern; P],
-    cor_pat_hashmap: &HashMap<[u32; P], usize, BuildHasherDefault<WireHasher>>,
+    cor_pat_hashmap: &HashMap<u32, usize>,
 ) -> Option<Pattern> {
-    let hash = get_diffs_for(pattern, incor_patterns);
-    let asdf = cor_pat_hashmap.get(&hash).cloned();
-    println!("{hash:?}\n{asdf:?}");
-    asdf
+    let diffs = get_diffs_for(pattern, incor_patterns);
+    let hash = calc_diff_hash(diffs);
+    cor_pat_hashmap.get(&hash).cloned()
 }
 
 fn second_round_inference<const P: usize>(
@@ -187,48 +178,17 @@ fn read_segments(word: &str) -> Option<usize> {
         .reduce(|pattern, segment| pattern + segment)
 }
 
-fn calc_pattern_hash<const P: usize>(pattern: Pattern, patterns: [Pattern; P]) -> u32 {
-    let diffs = get_diffs_for(pattern, patterns);
-    let hash = calc_diff_hash(&diffs);
-    return hash;
-}
-
 fn get_diffs_for<const P: usize>(pattern: Pattern, patterns: [Pattern; P]) -> [u32; P] {
     let p1 = pattern;
     patterns.map(|p2| p1 ^ p2).map(usize::count_ones)
 }
 
-fn calc_diff_hash(diffs: &[u32]) -> u32 {
+fn calc_diff_hash<const P: usize>(diffs: [u32; P]) -> u32 {
     let mut sum = 0;
-    for &x in diffs {
+    for x in diffs {
         sum = sum.overflowing_add(&hash(x)).0;
     }
     sum
-}
-
-#[derive(Default)]
-struct WireHasher {
-    state: u64,
-}
-
-impl Hasher for WireHasher {
-    fn finish(&self) -> u64 {
-        println!("{}", self.state);
-        self.state
-    }
-
-    fn write(&mut self, bytes: &[u8]) {
-        // We'll only be writing u32s, i.e. chunks of 4 u8s
-        // print!("{:?}", u64::from(bytes);
-        let (chunks, _) = bytes.as_chunks::<4>();
-        for &chunk in chunks {
-            let x = u32::from_be_bytes(chunk);
-            let y = hash(x) as u64;
-            // We don't want the order of the u32s to matter, i.e. we want
-            // an association operation across the u32s.
-            self.state = self.state.overflowing_add(y).0;
-        }
-    }
 }
 
 fn hash(mut x: u32) -> u32 {
