@@ -6,7 +6,7 @@ use {
     crate::types::{Error, Solution},
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct BingoSpace {
     value: i64,
     marked: bool,
@@ -35,7 +35,10 @@ pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
         soln1 = soln1.or(part1(curr_draw, &boards));
         soln2 = soln2.or(part2(curr_draw, &boards));
 
-        boards = boards.into_iter().filter(|b| !won(b)).collect();
+        boards = boards
+            .into_iter()
+            .filter(|b| !find_completed_set(b).is_some())
+            .collect();
         if boards.len() == 0 {
             break;
         }
@@ -48,7 +51,7 @@ pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
 
 fn part1(curr_draw: i64, boards: &[Board]) -> Option<i64> {
     for b in boards {
-        if won(b) {
+        if find_completed_set(b).is_some() {
             return Some(calc_score(b, curr_draw));
         }
     }
@@ -72,17 +75,18 @@ fn mark_board(board: &mut Board, x: i64) {
     }
 }
 
-fn won(board: &Board) -> bool {
+fn find_completed_set(board: &Board) -> Option<[BingoSpace; 5]> {
     if let Some(first_row) = board.first() {
-        let completed_row = board.iter().find(|&x| completed(x));
+        let completed_row = board.iter().find(|row| completed(*row)).cloned();
         let completed_col = first_row
             .iter()
             .enumerate()
             .map(|(i, _)| get_column(board.iter(), i))
-            .find(|col| completed(&col));
-        completed_row.is_some() || completed_col.is_some()
+            .find(|col| completed(&col))
+            .map(|col| col.try_into().unwrap());
+        completed_row.or(completed_col)
     } else {
-        false
+        None
     }
 }
 
