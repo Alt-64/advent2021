@@ -6,6 +6,7 @@ pub enum Error {
     ParseIntError(std::num::ParseIntError),
     ParseFloatError(std::num::ParseFloatError),
     TryFromVecError,
+    TryFromIntError(std::num::TryFromIntError),
     Unrecognized(String),
     BadInput(String),
     NoSolution,
@@ -24,6 +25,11 @@ impl From<std::num::ParseIntError> for Error {
 impl From<std::num::ParseFloatError> for Error {
     fn from(e: std::num::ParseFloatError) -> Self {
         Error::ParseFloatError(e)
+    }
+}
+impl From<std::num::TryFromIntError> for Error {
+    fn from(e: std::num::TryFromIntError) -> Self {
+        Error::TryFromIntError(e)
     }
 }
 impl<T> From<Vec<T>> for Error {

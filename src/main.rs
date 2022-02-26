@@ -3,6 +3,7 @@
 #![feature(hash_drain_filter)]
 #![feature(array_zip)]
 #![feature(slice_as_chunks)]
+#![feature(let_chains)]
 use std::{env, time::Instant};
 
 use types::{Error, Solution};
@@ -25,6 +26,7 @@ fn main() {
         aoc2021::day6::solve,
         aoc2021::day7::solve,
         aoc2021::day8::solve,
+        aoc2021::day9::solve,
     ]
     .iter()
     .enumerate()
@@ -40,14 +42,14 @@ fn main() {
 }
 
 fn print_results(day: usize, result: Result<(Solution, Solution), Error>, time: u128) {
-    println!("== Day {} ==", day);
+    print!("Day {} |", day);
+    print!("\tTime:   {}ms", time);
     match result {
         Ok((soln1, soln2)) => {
-            println!("Part 1: {:?}", soln1);
-            println!("Part 2: {:?}", soln2);
+            print!("\tPart 1: {:?}, ", soln1);
+            print!("\tPart 2: {:?}, ", soln2);
         }
-        Err(e) => println!("Encountered an Error: {:?}", e),
+        Err(e) => print!("\tEncountered an Error: {:?}, ", e),
     }
-    println!("Time:   {}ms", time);
-    println!();
+    println!("");
 }
