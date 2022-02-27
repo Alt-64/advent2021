@@ -12,8 +12,8 @@ fn read_input(path: &str) -> Result<Vec<i64>, Error> {
 }
 
 pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
-    let mut crab_positions: Vec<i64> = read_input(path)?;
-    let soln1 = part1(&mut crab_positions);
+    let crab_positions: Vec<i64> = read_input(path)?;
+    let soln1 = part1(&crab_positions);
     let soln2 = part2(&crab_positions);
     Ok((soln1, soln2))
 }
@@ -28,8 +28,8 @@ fn part1(crab_positions: &Vec<i64>) -> Result<i64, Error> {
 
 fn part2(crab_positions: &Vec<i64>) -> Result<i64, Error> {
     let max_pos = *crab_positions.iter().max().ok_or(Error::NoSolution)?;
-    let min_pos = *crab_positions.iter().min().unwrap();
-    let mut min_cost = 0;
+    let min_pos = *crab_positions.iter().min().ok_or(Error::NoSolution)?;
+    let mut min_cost = i64::MAX;
     for pos in min_pos..max_pos + 1 {
         let mut cost = 0;
         for crab_pos in crab_positions {
