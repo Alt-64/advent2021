@@ -27,6 +27,7 @@ fn main() {
         aoc2021::day7::solve,
         aoc2021::day8::solve,
         aoc2021::day9::solve,
+        aoc2021::day10::solve,
     ]
     .iter()
     .enumerate()
@@ -42,7 +43,7 @@ fn main() {
 }
 
 fn print_results(day: usize, result: Result<(Solution, Solution), Error>, time: u128) {
-    print!("Day {} |", day);
+    print!("Day {} | ", day);
     print!("\tTime:   {}ms", time);
     match result {
         Ok((soln1, soln2)) => {
