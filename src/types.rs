@@ -7,7 +7,6 @@ pub enum Error {
     ParseFloatError(std::num::ParseFloatError),
     TryFromVecError,
     TryFromIntError(std::num::TryFromIntError),
-    Unrecognized(String),
     BadInput(String),
     NoSolution,
 }
@@ -33,12 +32,12 @@ impl From<std::num::TryFromIntError> for Error {
     }
 }
 impl<T> From<Vec<T>> for Error {
-    fn from(e: Vec<T>) -> Self {
+    fn from(_: Vec<T>) -> Self {
         Error::TryFromVecError
     }
 }
 impl FromIterator<std::num::ParseIntError> for Error {
-    fn from_iter<I: IntoIterator<Item = std::num::ParseIntError>>(iter: I) -> Self {
+    fn from_iter<I: IntoIterator<Item = std::num::ParseIntError>>(_: I) -> Self {
         Error::TryFromVecError
     }
 }

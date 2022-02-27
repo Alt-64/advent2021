@@ -48,7 +48,7 @@ fn read_seven_segment(pattern: Pattern) -> Result<char, Error> {
         0b0100101 => '7',
         0b1111111 => '8',
         0b1101111 => '9',
-        _ => return Err(Error::Unrecognized(pattern.to_string())),
+        _ => return Err(Error::BadInput(pattern.to_string())),
     })
 }
 

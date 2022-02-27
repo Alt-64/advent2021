@@ -37,7 +37,7 @@ fn part1_controls(acc: SubPos, cmd: SubCmd) -> Result<SubPos, Error> {
             depth: acc.depth + cmd.distance,
             ..acc
         }),
-        _ => Err(Error::Unrecognized(cmd.direction.to_string())),
+        _ => Err(Error::BadInput(cmd.direction.to_string())),
     }
 }
 
@@ -56,7 +56,7 @@ fn part2_controls(acc: SubPos, cmd: SubCmd) -> Result<SubPos, Error> {
             aim: acc.aim + cmd.distance,
             ..acc
         }),
-        _ => Err(Error::Unrecognized(cmd.direction.to_string())),
+        _ => Err(Error::BadInput(cmd.direction.to_string())),
     }
 }
 
