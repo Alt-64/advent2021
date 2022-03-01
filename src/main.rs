@@ -28,6 +28,7 @@ fn main() {
         aoc2021::day8::solve,
         aoc2021::day9::solve,
         aoc2021::day10::solve,
+        aoc2021::day11::solve,
     ]
     .iter()
     .enumerate()
