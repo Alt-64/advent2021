@@ -1,10 +1,11 @@
 use std::fs::read_to_string;
 
-use crate::types::{Error, Solution};
+use crate::types::{ Solution, BadInputError};
+use anyhow::Result;
 
 type Coordinate = (usize, usize);
 
-pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
+pub fn solve(path: &str) -> Result<(Solution, Solution)> {
     let height_map: Vec<Vec<u8>> = HeightMap::from_file(path)?;
 
     let bottom_coords = height_map.get_bottoms();
@@ -37,7 +38,7 @@ trait HeightMap<T>
 where
     Self: Sized,
 {
-    fn from_file(path: &str) -> Result<Self, Error>;
+    fn from_file(path: &str) -> Result<Self>;
     fn get_height_at(&self, coord: Coordinate) -> Option<&u8>;
     fn get_mut_height_at(&mut self, coord: Coordinate) -> Option<&mut u8>;
     fn has_bottom_at(&self, coord: Coordinate) -> bool;
@@ -46,7 +47,7 @@ where
 }
 
 impl HeightMap<u8> for Vec<Vec<u8>> {
-    fn from_file(path: &str) -> Result<Self, Error> {
+    fn from_file(path: &str) -> Result<Self> {
         read_to_string(path)?
             .split("\n")
             .filter(|&s| s != "")
@@ -254,10 +255,10 @@ trait Floodable<T> {
     }
 }
 
-fn read_line(line: &str) -> Result<Vec<u8>, Error> {
+fn read_line(line: &str) -> Result<Vec<u8>> {
     line.chars()
         .map(|c| {
-            let x = c.to_digit(10).ok_or(Error::BadInput(c.to_string()))?;
+            let x = c.to_digit(10).ok_or(BadInputError(c.to_string()))?;
             Ok(x as u8)
         })
         .collect::<Result<Vec<_>, _>>()

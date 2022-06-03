@@ -1,16 +1,17 @@
 // https://adventofcode.com/2021/day/3
 use std::{fs::read_to_string, ops::Index};
 
-use crate::types::{Error, Solution};
+use crate::types::Solution;
+use anyhow::Result;
 
-pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
+pub fn solve(path: &str) -> Result<(Solution, Solution)> {
     let report = read_input(path)?;
     let soln1 = part1(&report);
     let soln2 = part2(&report);
     Ok((soln1, soln2))
 }
 
-pub fn part1(report: &Vec<Vec<bool>>) -> Result<i64, Error> {
+pub fn part1(report: &Vec<Vec<bool>>) -> Result<i64> {
     if let Some(row) = report.first() {
         let common_bits: Vec<bool> = (0..row.len())
             .map(|i| get_column(report.iter(), i))
@@ -28,7 +29,7 @@ pub fn part1(report: &Vec<Vec<bool>>) -> Result<i64, Error> {
     }
 }
 
-pub fn part2(report: &Vec<Vec<bool>>) -> Result<i64, Error> {
+pub fn part2(report: &Vec<Vec<bool>>) -> Result<i64> {
     let o2_rating = chem_rating(report, &|col| most_common_bit(col));
     let co2_rating = chem_rating(report, &|col| !most_common_bit(col));
 
@@ -76,7 +77,7 @@ fn chem_rating<'a>(report: &Vec<Vec<bool>>, calc_mode: &dyn Fn(&[bool]) -> bool)
     }
 }
 
-fn read_input(path: &str) -> Result<Vec<Vec<bool>>, Error> {
+fn read_input(path: &str) -> Result<Vec<Vec<bool>>> {
     let diagnostic_report: Vec<Vec<bool>> = read_to_string(path)?
         .split("\n")
         .filter(|&s| s != "")

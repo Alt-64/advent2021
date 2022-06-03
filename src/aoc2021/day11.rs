@@ -1,8 +1,9 @@
 use std::fs::read_to_string;
 
-use crate::types::{Error, Solution};
+use crate::types::{ Solution, BadInputError};
+use anyhow::Result;
 
-pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
+pub fn solve(path: &str) -> Result<(Solution, Solution)> {
     let octopi = read_to_string(path)?
         .split("\n")
         .filter(|&s| s != "")
@@ -26,24 +27,21 @@ pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
             break;
         }
         state.flashes = 0;
-
-        println!("==============================");
     }
     Ok((Ok(total_flashes), Ok(step_counter)))
 }
 
-fn read_line(line: &str) -> Result<Vec<u32>, Error> {
+fn read_line(line: &str) -> Result<Vec<u32>> {
     line.chars()
-        .map(|c| c.to_digit(10).ok_or_else(|| Error::BadInput(c.to_string())))
+        .map(|c| c.to_digit(10).ok_or_else(|| BadInputError(c.to_string())))
         .collect()
 }
 
-fn condense<T, const N: usize, const M: usize>(vecs: Vec<Vec<T>>) -> Result<[[T; M]; N], Error> {
+fn condense<T, const N: usize, const M: usize>(vecs: Vec<Vec<T>>) -> Result<[[T; M]; N]> {
     vecs.into_iter()
         .map(TryInto::try_into)
-        .collect::<Result<Vec<_>, _>>()?
+        .collect::<Result<Vec<_>>_>()?
         .try_into()
-        .map_err(Into::into)
 }
 
 struct OctopiFrame<const N: usize, const M: usize> {

@@ -1,7 +1,8 @@
 // https://adventofcode.com/2021/day/2
 use std::fs::read_to_string;
 
-use crate::types::{Error, Solution};
+use crate::types::{Solution, BadInputError};
+use anyhow::Result;
 
 struct SubPos {
     horizontal: i64,
@@ -9,88 +10,97 @@ struct SubPos {
     aim: i64,
 }
 
-struct SubCmd<'a> {
-    direction: &'a str,
+enum Direction {
+    Forward,
+    Up,
+    Down,
+}
+
+struct SubCmd {
+    direction: Direction,
     distance: i64,
 }
 
-pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
-    let input = read_to_string(path)?;
-    let commands: Vec<&str> = input.split("\n").filter(|&cmd| cmd != "").collect();
+pub fn solve(path: &str) -> Result<(Solution, Solution)> {
+    let commands: Vec<&str> = read_to_string(path)?
+        .split("\n")
+        .filter(|&cmd| cmd != "")
+        .collect();
+
     Ok((
-        maneuver_sub(&commands, part1_controls),
-        maneuver_sub(&commands, part2_controls),
+        maneuver_sub(&commands, part1_control),
+        maneuver_sub(&commands, part2_control),
     ))
 }
 
-fn part1_controls(acc: SubPos, cmd: SubCmd) -> Result<SubPos, Error> {
+fn part1_control(acc: SubPos, cmd: SubCmd) -> SubPos {
     match cmd.direction {
-        "forward" => Ok(SubPos {
+        Direction::Forward => SubPos {
             horizontal: acc.horizontal + cmd.distance,
             ..acc
-        }),
-        "up" => Ok(SubPos {
+        },
+        Direction::Up => SubPos {
             depth: acc.depth - cmd.distance,
             ..acc
-        }),
-        "down" => Ok(SubPos {
+        },
+        Direction::Down => SubPos {
             depth: acc.depth + cmd.distance,
             ..acc
-        }),
-        _ => Err(Error::BadInput(cmd.direction.to_string())),
+        },
     }
 }
 
-fn part2_controls(acc: SubPos, cmd: SubCmd) -> Result<SubPos, Error> {
+fn part2_control(acc: SubPos, cmd: SubCmd) -> SubPos {
     match cmd.direction {
-        "forward" => Ok(SubPos {
+        Direction::Forward => SubPos {
             horizontal: acc.horizontal + cmd.distance,
             depth: acc.depth + acc.aim * cmd.distance,
             ..acc
-        }),
-        "up" => Ok(SubPos {
+        },
+        Direction::Up => SubPos {
             aim: acc.aim - cmd.distance,
             ..acc
-        }),
-        "down" => Ok(SubPos {
+        },
+        Direction::Down => SubPos {
             aim: acc.aim + cmd.distance,
             ..acc
-        }),
-        _ => Err(Error::BadInput(cmd.direction.to_string())),
+        },
     }
 }
 
-fn maneuver_sub(
-    commands: &[&str],
-    controls: fn(SubPos, SubCmd) -> Result<SubPos, Error>,
-) -> Result<i64, Error> {
-    let final_pos: SubPos = commands
-        .iter()
-        .map(parse_command)
-        .collect::<Result<Vec<SubCmd>, Error>>()?
-        .into_iter()
-        .try_fold(
-            SubPos {
-                horizontal: 0,
-                depth: 0,
-                aim: 0,
-            },
-            controls,
-        )?;
+fn maneuver_sub(commands: &[&str], control: fn(SubPos, SubCmd) -> SubPos) -> Result<i64> {
+    let mut pos = SubPos {
+        horizontal: 0,
+        depth: 0,
+        aim: 0,
+    };
 
-    Ok(final_pos.horizontal * final_pos.depth)
+    for cmd in commands {
+        pos = control(pos, parse_command(cmd)?)
+    }
+
+    Ok(pos.horizontal * pos.depth)
 }
 
-fn parse_command<'a>(cmd_str: &&'a str) -> Result<SubCmd<'a>, Error> {
-    let cmd_strs = cmd_str.split(" ").collect::<Vec<&str>>();
-    if cmd_strs.len() < 2 {
-        return Err(Error::BadInput(cmd_str.to_string()));
+fn parse_command<'a>(cmd: &&'a str) -> Result<SubCmd> {
+    let words = cmd.split(" ").collect::<Vec<&str>>();
+    if words.len() < 2 {
+        return Err(BadInputError(words.to_string()));
     }
-    let direction = cmd_strs[0];
-    let distance = cmd_strs[1].parse::<i64>()?;
+    let direction = parse_direction(words[0])?;
+    let distance = words[1].parse::<i64>()?;
 
     Ok(SubCmd {
         direction,
         distance,
+    })
+}
+
+fn parse_direction(dir: &str) -> Result<Direction> {
+    Ok(match dir {
+        "forward" => Direction::Forward,
+        "up" => Direction::Up,
+        "down" => Direction::Down,
+        _ => return Err(BadInputError(dir.to_string())),
     })
 }

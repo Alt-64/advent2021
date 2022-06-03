@@ -1,8 +1,7 @@
 use std::{collections::HashMap, fs::read_to_string};
 
-use num::traits::ops::overflowing::OverflowingAdd;
-
-use crate::types::{Error, Solution};
+use crate::types::{ Solution, BadInputError, NoSolutionError};
+use anyhow::Result;
 
 // Patterns are read in as strings of characters, but the information content
 // (which segments are lit) can be compressed down to a bitfield stored
@@ -36,7 +35,7 @@ const CORRECT_PATTERNS: [Pattern; 10] = [
     0b1111111, 0b1101111,
 ];
 
-fn read_seven_segment(pattern: Pattern) -> Result<char, Error> {
+fn read_seven_segment(pattern: Pattern) -> Result<char> {
     Ok(match pattern {
         0b1110111 => '0',
         0b0100100 => '1',
@@ -48,7 +47,7 @@ fn read_seven_segment(pattern: Pattern) -> Result<char, Error> {
         0b0100101 => '7',
         0b1111111 => '8',
         0b1101111 => '9',
-        _ => return Err(Error::BadInput(pattern.to_string())),
+        _ => return Err(BadInputError(pattern.to_string())),
     })
 }
 
@@ -58,14 +57,14 @@ fn bit_segment_from(char_segment: char) -> Segment {
     1 << x
 }
 
-pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
+pub fn solve(path: &str) -> Result<(Solution, Solution)> {
     let input = read_to_string(path)?;
     let entries: Vec<Entry<10, 4>> = input
         .split('\n')
         .filter(|&c| c != "")
         .map(str::trim)
         .map(read_line)
-        .collect::<Result<_, Error>>()?;
+        .collect::<Result<_>>()?;
 
     let cor_hashes = CORRECT_PATTERNS.map(|pattern| {
         let diffs = get_diffs_for(pattern, CORRECT_PATTERNS);
@@ -92,7 +91,7 @@ pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
                 pair.or_else(|| {
                     second_round_inference(i, &inferred_pairs, CORRECT_PATTERNS, incor_patterns)
                 })
-                .ok_or(Error::NoSolution)
+                .ok_or(NoSolutionError)
                 .map(|(_incorrect, inferred)| read_seven_segment(inferred))?
             })
             .collect::<Result<String, _>>()?;
@@ -153,29 +152,24 @@ fn part2(digits: &str) -> i64 {
     digits.parse::<i64>().unwrap()
 }
 
-fn read_line<'a, const P: usize, const O: usize>(line: &'a str) -> Result<Entry<P, O>, Error> {
+fn read_line<'a, const P: usize, const O: usize>(line: &'a str) -> Result<Entry<P, O>> {
     let mut elts = line.split('|');
-    let mut get_values = || elts.next().ok_or(Error::BadInput(line.to_owned()));
+    let mut get_values = || elts.next().ok_or(BadInputError(line.to_owned()));
 
     let patterns = read_words(get_values()?)?;
     let outputs = read_words(get_values()?)?;
     Ok((patterns, outputs))
 }
 
-fn read_words<const P: usize>(s: &str) -> Result<[usize; P], Error> {
+fn read_words<const P: usize>(s: &str) -> Result<[usize; P]> {
     s.split_whitespace()
         .map(read_segments)
-        .collect::<Option<Vec<usize>>>()
-        .map(TryInto::try_into)
-        .map(Result::ok)
-        .flatten()
-        .ok_or(Error::BadInput(s.to_string()))
+        .collect::<Vec<usize>>()
+        .try_into()
 }
 
-fn read_segments(word: &str) -> Option<usize> {
-    word.chars()
-        .map(bit_segment_from)
-        .reduce(|pattern, segment| pattern + segment)
+fn read_segments(word: &str) -> usize {
+    word.chars().map(bit_segment_from).sum()
 }
 
 fn get_diffs_for<const P: usize>(pattern: Pattern, patterns: [Pattern; P]) -> [u32; P] {
@@ -184,11 +178,7 @@ fn get_diffs_for<const P: usize>(pattern: Pattern, patterns: [Pattern; P]) -> [u
 }
 
 fn calc_diff_hash<const P: usize>(diffs: [u32; P]) -> u32 {
-    let mut sum = 0;
-    for x in diffs {
-        sum = sum.overflowing_add(&hash(x)).0;
-    }
-    sum
+    diffs.into_iter().map(hash).sum::<u32>()
 }
 
 fn hash(mut x: u32) -> u32 {

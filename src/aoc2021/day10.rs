@@ -1,8 +1,9 @@
 use std::fs::read_to_string;
 
-use crate::types::{Error, Solution};
+use crate::types::{ Solution};
+use anyhow::Result;
 
-pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
+pub fn solve(path: &str) -> Result<(Solution, Solution)> {
     let mut soln1 = 0;
     let mut autocomplete_scores = Vec::new();
 

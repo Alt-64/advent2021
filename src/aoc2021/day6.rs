@@ -1,6 +1,7 @@
 use std::{fs::read_to_string, num::ParseIntError};
 
-use crate::types::{Error, Solution};
+use crate::types::{ Solution};
+use anyhow::Result;
 
 // Rather than simulate the internal timers of flounders individually, I decided
 // to track flounders based on their spawning interval.  This approach
@@ -17,7 +18,7 @@ const JUVENILE_PERIOD: usize = 2;
 
 type Flounder = i64;
 
-pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
+pub fn solve(path: &str) -> Result<(Solution, Solution)> {
     // Flounders ready to spawn
     let mut flounders: [Flounder; SPAWN_INTERVAL] = read_input(path)?;
     // Flounders that are not ready to spawn.
@@ -27,6 +28,7 @@ pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
         spawn(i, &mut flounders, &mut juveniles);
     }
     let soln1 = count_flounders(&flounders, &juveniles);
+
     for i in 80..256 {
         spawn(i, &mut flounders, &mut juveniles);
     }
@@ -36,7 +38,7 @@ pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
 }
 
 // The original form is a list of the ages of all the currently living flounders.
-fn read_input(path: &str) -> Result<[Flounder; SPAWN_INTERVAL], Error> {
+fn read_input(path: &str) -> Result<[Flounder; SPAWN_INTERVAL]> {
     let original_form: Vec<usize> = read_to_string(path)?
         .split(',')
         .map(str::trim)
@@ -49,10 +51,7 @@ fn read_input(path: &str) -> Result<[Flounder; SPAWN_INTERVAL], Error> {
     Ok(interval_form)
 }
 
-fn count_flounders(
-    flounders: &[Flounder; SPAWN_INTERVAL],
-    juveniles: &[Flounder; SPAWN_INTERVAL],
-) -> i64 {
+fn count_flounders(flounders: &[Flounder], juveniles: &[Flounder]) -> i64 {
     flounders.iter().sum::<i64>() + juveniles.iter().sum::<i64>()
 }
 

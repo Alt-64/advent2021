@@ -3,8 +3,12 @@ use std::fs::read_to_string;
 
 use {
     super::day3::get_column,
-    crate::types::{Error, Solution},
+    crate::types::Solution,
 };
+
+use anyhow::Result;
+
+use crate::types::NoSolutionError;
 
 #[derive(Clone, Copy, Debug)]
 struct BingoSpace {
@@ -23,7 +27,7 @@ impl BingoSpace {
 
 type Board = [[BingoSpace; 5]; 5];
 
-pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
+pub fn solve(path: &str) -> Result<(Solution, Solution)> {
     let (draws, mut boards) = read_input(path)?;
     let mut soln1 = None;
     let mut soln2 = None;
@@ -31,9 +35,12 @@ pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
         for b in &mut boards {
             mark_board(b, curr_draw);
         }
-
-        soln1 = soln1.or(part1(curr_draw, &boards));
-        soln2 = soln2.or(part2(curr_draw, &boards));
+        if soln1.is_none() {
+            soln1 = part1(curr_draw, &boards);
+        }
+        if soln2.is_none() {
+            soln2 = part2(curr_draw, &boards);
+        }
 
         boards = boards
             .into_iter()
@@ -44,8 +51,8 @@ pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
         }
     }
     Ok((
-        soln1.ok_or(Error::NoSolution),
-        soln2.ok_or(Error::NoSolution),
+        soln1.ok_or(NoSolutionError),
+        soln2.ok_or(NoSolutionError),
     ))
 }
 
@@ -77,12 +84,12 @@ fn mark_board(board: &mut Board, x: i64) {
 
 fn find_completed_set(board: &Board) -> Option<[BingoSpace; 5]> {
     if let Some(first_row) = board.first() {
-        let completed_row = board.iter().find(|row| completed(*row)).cloned();
+        let completed_row = board.iter().find(|&row| completed(row)).cloned();
         let completed_col = first_row
             .iter()
             .enumerate()
             .map(|(i, _)| get_column(board.iter(), i))
-            .find(|col| completed(&col))
+            .find(|col| completed(col))
             .map(|col| col.try_into().unwrap());
         completed_row.or(completed_col)
     } else {
@@ -105,7 +112,7 @@ fn calc_score(board: &Board, last_draw: i64) -> i64 {
     sum * last_draw
 }
 
-fn read_input(path: &str) -> Result<(Vec<i64>, Vec<Board>), Error> {
+fn read_input(path: &str) -> Result<(Vec<i64>, Vec<Board>)> {
     let input = read_to_string(path)?;
     let lines: Vec<&str> = input.split('\n').collect();
     let draws: Vec<i64> = lines[0]
@@ -119,21 +126,19 @@ fn read_input(path: &str) -> Result<(Vec<i64>, Vec<Board>), Error> {
     Ok((draws, boards))
 }
 
-fn read_input_board(text: &[&str]) -> Result<Board, Error> {
+fn read_input_board(text: &[&str]) -> Result<Board> {
     text.iter()
         .map(|line| read_input_board_line(*line))
         .collect::<Result<Vec<[BingoSpace; 5]>, _>>()?
         .try_into()
-        .map_err(Error::from)
 }
 
-fn read_input_board_line(line: &str) -> Result<[BingoSpace; 5], Error> {
+fn read_input_board_line(line: &str) -> Result<[BingoSpace; 5]> {
     line.split_whitespace()
         .map(|str_value| {
             let value = str_value.parse()?;
             Ok(BingoSpace::new(value))
         })
-        .collect::<Result<Vec<BingoSpace>, Error>>()?
+        .collect::<Result<Vec<BingoSpace>>>()?
         .try_into()
-        .map_err(Error::from)
 }

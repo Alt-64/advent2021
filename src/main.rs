@@ -29,18 +29,17 @@ fn main() {
         aoc2021::day9::solve,
         aoc2021::day10::solve,
         aoc2021::day11::solve,
+        aoc2021::day12::solve,
     ]
     .iter()
     .enumerate()
     .map(|(day, solver)| {
-        let day = day + 1;
+        day += 1; // Days start at 1.
         let input_path = format!("puzzle_input/{}{}.txt", filename, day);
-        let now = Instant::now();
+        let timer = Instant::now();
         let result = solver(&input_path);
-        let elapsed = now.elapsed().as_millis();
-        print_results(day, result, elapsed);
-    })
-    .for_each(drop);
+        print_results(day, result, timer.elapsed().as_millis());
+    });
 }
 
 fn print_results(day: usize, result: Result<(Solution, Solution), Error>, time: u128) {

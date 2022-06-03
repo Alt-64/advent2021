@@ -1,43 +1,20 @@
-pub type Solution = Result<i64, Error>;
 
-#[derive(Debug)]
-pub enum Error {
-    IOError(std::io::Error),
-    ParseIntError(std::num::ParseIntError),
-    ParseFloatError(std::num::ParseFloatError),
-    TryFromVecError,
-    TryFromIntError(std::num::TryFromIntError),
-    BadInput(String),
-    NoSolution,
+pub type Solution = anyhow::Result<i64>;
+
+#[derive(Debug, thiserror::Error)]
+pub struct NoSolutionError;
+
+impl std::fmt::Display for NoSolutionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "no solution exists.")
+    }
 }
 
-impl From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Self {
-        Error::IOError(e)
-    }
-}
-impl From<std::num::ParseIntError> for Error {
-    fn from(e: std::num::ParseIntError) -> Self {
-        Error::ParseIntError(e)
-    }
-}
-impl From<std::num::ParseFloatError> for Error {
-    fn from(e: std::num::ParseFloatError) -> Self {
-        Error::ParseFloatError(e)
-    }
-}
-impl From<std::num::TryFromIntError> for Error {
-    fn from(e: std::num::TryFromIntError) -> Self {
-        Error::TryFromIntError(e)
-    }
-}
-impl<T> From<Vec<T>> for Error {
-    fn from(_: Vec<T>) -> Self {
-        Error::TryFromVecError
-    }
-}
-impl FromIterator<std::num::ParseIntError> for Error {
-    fn from_iter<I: IntoIterator<Item = std::num::ParseIntError>>(_: I) -> Self {
-        Error::TryFromVecError
+#[derive(Debug, thiserror::Error)]
+pub struct BadInputError(pub String);
+
+impl std::fmt::Display for BadInputError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "bad input: \'{}\' .", self.0)
     }
 }

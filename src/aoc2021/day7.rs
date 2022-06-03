@@ -1,9 +1,10 @@
 use std::fs::read_to_string;
+use anyhow::Result;
 
-use crate::types::{Error, Solution};
+use crate::types::{ Solution, NoSolutionError};
 use num::abs;
 
-fn read_input(path: &str) -> Result<Vec<i64>, Error> {
+fn read_input(path: &str) -> Result<Vec<i64>> {
     read_to_string(path)?
         .split(',')
         .map(|line| line.trim().parse::<i64>())
@@ -11,24 +12,24 @@ fn read_input(path: &str) -> Result<Vec<i64>, Error> {
         .map_err(Into::into)
 }
 
-pub fn solve(path: &str) -> Result<(Solution, Solution), Error> {
+pub fn solve(path: &str) -> Result<(Solution, Solution)> {
     let crab_positions: Vec<i64> = read_input(path)?;
     let soln1 = part1(&crab_positions);
     let soln2 = part2(&crab_positions);
     Ok((soln1, soln2))
 }
 
-fn part1(crab_positions: &Vec<i64>) -> Result<i64, Error> {
+fn part1(crab_positions: &Vec<i64>) -> Result<i64> {
     let median = crab_positions
         .get(crab_positions.len() / 2)
-        .ok_or(Error::NoSolution)?;
+        .ok_or(NoSolutionError)?;
     let cost = crab_positions.iter().map(|x| abs(x - *median)).sum();
     Ok(cost)
 }
 
-fn part2(crab_positions: &Vec<i64>) -> Result<i64, Error> {
-    let max_pos = *crab_positions.iter().max().ok_or(Error::NoSolution)?;
-    let min_pos = *crab_positions.iter().min().ok_or(Error::NoSolution)?;
+fn part2(crab_positions: &Vec<i64>) -> Result<i64> {
+    let max_pos = *crab_positions.iter().max().ok_or(NoSolutionError)?;
+    let min_pos = *crab_positions.iter().min().ok_or(NoSolutionError)?;
     let mut min_cost = i64::MAX;
     for pos in min_pos..max_pos + 1 {
         let mut cost = 0;
