@@ -1,7 +1,7 @@
-use std::fs::read_to_string;
 use anyhow::Result;
+use std::fs::read_to_string;
 
-use crate::types::{ Solution, NoSolutionError};
+use crate::types::{Answer, NoSolutionError};
 use num::abs;
 
 fn read_input(path: &str) -> Result<Vec<i64>> {
@@ -12,7 +12,7 @@ fn read_input(path: &str) -> Result<Vec<i64>> {
         .map_err(Into::into)
 }
 
-pub fn solve(path: &str) -> Result<(Solution, Solution)> {
+pub fn solve(path: &str) -> Result<(Answer, Answer)> {
     let crab_positions: Vec<i64> = read_input(path)?;
     let soln1 = part1(&crab_positions);
     let soln2 = part2(&crab_positions);

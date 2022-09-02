@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs::read_to_string};
 
-use crate::types::{ Solution, BadInputError, NoSolutionError};
+use crate::types::{Answer, BadInputError, NoSolutionError};
 use anyhow::Result;
 
 // Patterns are read in as strings of characters, but the information content
@@ -8,21 +8,6 @@ use anyhow::Result;
 // as an integer.  The bitfield form reduces the memory footprint of the
 // patterns and makes comparing patterns a little easier.
 //
-// To match a pattern to a miswired pattern, we first determine how patterns
-// are unique within their set.  If two patterns within a set differ by a single
-// segment being lit, their matches in the miswired set will also differ
-// by a single segment, though probably a different segment.  If you take this
-// thought to it's logical extreme and count the number of different segments
-// between a single pattern and all the others in it's set, you'll get a
-// representation of that pattern that will match against at
-// least one other pattern in the opposite set.
-//
-// If there is just one match, the job is done.  You can even infer some of the
-// other pattern pairings based on this 'diff-set' if you'd like.
-//
-// If there is more than one match, we have to use one of the patterns that
-// did have a one-to-one match to infer a pairing.  If none exists, it is
-// impossible to determine a map from the wired set to the miswired set.
 
 type Segment = usize;
 type Pattern = usize;
@@ -57,20 +42,45 @@ fn bit_segment_from(char_segment: char) -> Segment {
     1 << x
 }
 
-pub fn solve(path: &str) -> Result<(Solution, Solution)> {
-    let input = read_to_string(path)?;
-    let entries: Vec<Entry<10, 4>> = input
+// To match a pattern to a miswired pattern, we first determine how patterns
+// are unique within their set.  If two patterns within a set differ by a single
+// segment being lit, their matches in the miswired set will also differ
+// by a single segment, though probably a different segment.  If you take this
+// thought to it's logical extreme and count the number of different segments
+// between a single pattern and all the others in it's set, you'll get a
+// representation of that pattern that will match against at
+// least one other pattern in the opposite set.
+//
+// If there is just one match, the job is done.  You can even infer some of the
+// other pattern pairings based on this 'diff-set' if you'd like.
+//
+// If there is more than one match, we have to use one of the patterns that
+// did have a one-to-one match to infer a pairing.  If none exists, it is
+// impossible to determine a map from the wired set to the miswired set.
+//
+
+fn get_entries(input: String) -> Result<Vec<Entry<10, 4>>> {
+    input
         .split('\n')
         .filter(|&c| c != "")
         .map(str::trim)
         .map(read_line)
-        .collect::<Result<_>>()?;
+        .collect::<Result<_>>()?
+}
 
+fn build_correct_pattern_hashmap() -> HashMap<u32, usize> {
     let cor_hashes = CORRECT_PATTERNS.map(|pattern| {
         let diffs = get_diffs_for(pattern, CORRECT_PATTERNS);
         calc_diff_hash(diffs)
     });
-    let cor_pat_hashmap = HashMap::from(cor_hashes.zip(CORRECT_PATTERNS));
+    return HashMap::from(cor_hashes.zip(CORRECT_PATTERNS));
+}
+
+pub fn solve(path: &str) -> Result<(Answer, Answer)> {
+    let input = read_to_string(path)?;
+    let entries = get_entries(input)?;
+
+    let cor_pat_hashmap = build_correct_pattern_hashmap();
 
     let mut soln1: i64 = 0;
     let mut soln2: i64 = 0;

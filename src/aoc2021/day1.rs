@@ -1,11 +1,11 @@
 // https://adventofcode.com/2021/day/1
-use std::fs::read_to_string;
+use std::{fs::read_to_string, num::ParseIntError};
 
-use crate::types::Solution;
+use crate::types::Answer;
 use anyhow::Result;
 
-pub fn solve(path: &str) -> Result<(Solution, Solution)> {
-    let input = read_input(path)?;
+pub fn solve(input: String) -> Result<(Answer, Answer)> {
+    let input = read_input(&input)?;
     Ok((part1(&input), part2(&input)))
 }
 
@@ -33,11 +33,9 @@ fn part2(input: &[i64]) -> Result<i64> {
     Ok(depth_counter)
 }
 
-fn read_input(path: &str) -> Result<Vec<i64>> {
-    let input = read_to_string(path)?
+fn read_input(input: &str) -> Result<Vec<i64>> {
+    Ok(input
         .split("\n")
         .map(str::parse::<i64>)
-        .flatten()
-        .collect::<Vec<i64>>();
-    Ok(input)
+        .collect::<Result<Vec<i64>, ParseIntError>>()?)
 }

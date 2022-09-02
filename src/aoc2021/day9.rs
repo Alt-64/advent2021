@@ -1,11 +1,11 @@
 use std::fs::read_to_string;
 
-use crate::types::{ Solution, BadInputError};
+use crate::types::{Answer, BadInputError};
 use anyhow::Result;
 
 type Coordinate = (usize, usize);
 
-pub fn solve(path: &str) -> Result<(Solution, Solution)> {
+pub fn solve(path: &str) -> Result<(Answer, Answer)> {
     let height_map: Vec<Vec<u8>> = HeightMap::from_file(path)?;
 
     let bottom_coords = height_map.get_bottoms();

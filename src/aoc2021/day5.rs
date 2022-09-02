@@ -1,13 +1,13 @@
 // https://adventofcode.com/2021/day/5
 use std::fs::read_to_string;
 
-use crate::types::{ Solution, NoSolutionError, BadInputError};
+use crate::types::{Answer, BadInputError, NoSolutionError};
 use anyhow::Result;
 
 type Point = [usize; 2];
 type Line = [Point; 2];
 
-pub fn solve(path: &str) -> Result<(Solution, Solution)> {
+pub fn solve(path: &str) -> Result<(Answer, Answer)> {
     let lines: Vec<Line> = read_input(path)?;
     let (xs, ys): (Vec<usize>, Vec<usize>) = lines.iter().flatten().map(|[x, y]| (x, y)).unzip();
 
@@ -94,11 +94,7 @@ fn read_input(path: &str) -> Result<Vec<Line>> {
         .collect()
 }
 
-fn read_pair<T>(
-    pair_str: &str,
-    pat: &str,
-    read: fn(&str) -> Result<T>,
-) -> Result<[T; 2]> {
+fn read_pair<T>(pair_str: &str, pat: &str, read: fn(&str) -> Result<T>) -> Result<[T; 2]> {
     pair_str
         .split(pat)
         .map(read)

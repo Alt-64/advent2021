@@ -1,7 +1,6 @@
 // https://adventofcode.com/2021/day/2
-use std::fs::read_to_string;
 
-use crate::types::{Solution, BadInputError};
+use crate::types::{Answer, BadInputError};
 use anyhow::Result;
 
 struct SubPos {
@@ -21,11 +20,8 @@ struct SubCmd {
     distance: i64,
 }
 
-pub fn solve(path: &str) -> Result<(Solution, Solution)> {
-    let commands: Vec<&str> = read_to_string(path)?
-        .split("\n")
-        .filter(|&cmd| cmd != "")
-        .collect();
+pub fn solve(input: String) -> Result<(Answer, Answer)> {
+    let commands: Vec<&str> = input.split("\n").filter(|&cmd| cmd != "").collect();
 
     Ok((
         maneuver_sub(&commands, part1_control),
@@ -85,7 +81,7 @@ fn maneuver_sub(commands: &[&str], control: fn(SubPos, SubCmd) -> SubPos) -> Res
 fn parse_command<'a>(cmd: &&'a str) -> Result<SubCmd> {
     let words = cmd.split(" ").collect::<Vec<&str>>();
     if words.len() < 2 {
-        return Err(BadInputError(words.to_string()));
+        return Err(BadInputError(words.join("")))?;
     }
     let direction = parse_direction(words[0])?;
     let distance = words[1].parse::<i64>()?;
@@ -101,6 +97,6 @@ fn parse_direction(dir: &str) -> Result<Direction> {
         "forward" => Direction::Forward,
         "up" => Direction::Up,
         "down" => Direction::Down,
-        _ => return Err(BadInputError(dir.to_string())),
+        _ => return Err(BadInputError(dir.to_string()))?,
     })
 }

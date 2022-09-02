@@ -1,7 +1,9 @@
+use thiserror::Error;
 
-pub type Solution = anyhow::Result<i64>;
+pub type Answer = anyhow::Result<i64>;
+pub type Solution = fn(String) -> anyhow::Result<(Answer, Answer)>;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Error)]
 pub struct NoSolutionError;
 
 impl std::fmt::Display for NoSolutionError {
@@ -10,7 +12,7 @@ impl std::fmt::Display for NoSolutionError {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Error)]
 pub struct BadInputError(pub String);
 
 impl std::fmt::Display for BadInputError {

@@ -1,6 +1,6 @@
 use std::{fs::read_to_string, num::ParseIntError};
 
-use crate::types::{ Solution};
+use crate::types::Answer;
 use anyhow::Result;
 
 // Rather than simulate the internal timers of flounders individually, I decided
@@ -18,7 +18,7 @@ const JUVENILE_PERIOD: usize = 2;
 
 type Flounder = i64;
 
-pub fn solve(path: &str) -> Result<(Solution, Solution)> {
+pub fn solve(path: &str) -> Result<(Answer, Answer)> {
     // Flounders ready to spawn
     let mut flounders: [Flounder; SPAWN_INTERVAL] = read_input(path)?;
     // Flounders that are not ready to spawn.

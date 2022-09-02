@@ -1,10 +1,7 @@
 // https://adventofcode.com/2021/day/4
 use std::fs::read_to_string;
 
-use {
-    super::day3::get_column,
-    crate::types::Solution,
-};
+use {super::day3::get_column, crate::types::Answer};
 
 use anyhow::Result;
 
@@ -27,7 +24,7 @@ impl BingoSpace {
 
 type Board = [[BingoSpace; 5]; 5];
 
-pub fn solve(path: &str) -> Result<(Solution, Solution)> {
+pub fn solve(path: &str) -> Result<(Answer, Answer)> {
     let (draws, mut boards) = read_input(path)?;
     let mut soln1 = None;
     let mut soln2 = None;
@@ -50,10 +47,7 @@ pub fn solve(path: &str) -> Result<(Solution, Solution)> {
             break;
         }
     }
-    Ok((
-        soln1.ok_or(NoSolutionError),
-        soln2.ok_or(NoSolutionError),
-    ))
+    Ok((soln1.ok_or(NoSolutionError), soln2.ok_or(NoSolutionError)))
 }
 
 fn part1(curr_draw: i64, boards: &[Board]) -> Option<i64> {

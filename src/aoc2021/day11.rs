@@ -1,9 +1,9 @@
 use std::fs::read_to_string;
 
-use crate::types::{ Solution, BadInputError};
+use crate::types::{Answer, BadInputError};
 use anyhow::Result;
 
-pub fn solve(path: &str) -> Result<(Solution, Solution)> {
+pub fn solve(path: &str) -> Result<(Answer, Answer)> {
     let octopi = read_to_string(path)?
         .split("\n")
         .filter(|&s| s != "")
@@ -12,21 +12,18 @@ pub fn solve(path: &str) -> Result<(Solution, Solution)> {
     let mut state = OctopiFrame::<10, 10> {
         flashes: 0,
         flashing: Vec::new(),
-        octopi: condense(octopi)?,
+        octopi: devec(octopi)?,
     };
 
     let mut step_counter = 0;
     let mut total_flashes = 0;
-    loop {
+    while state.flashes != 10 * 10 {
+        state.flashes = 0;
         state.step();
         step_counter += 1;
         if step_counter < 100 {
             total_flashes += state.flashes;
         }
-        if state.flashes == 10 * 10 {
-            break;
-        }
-        state.flashes = 0;
     }
     Ok((Ok(total_flashes), Ok(step_counter)))
 }
@@ -37,10 +34,10 @@ fn read_line(line: &str) -> Result<Vec<u32>> {
         .collect()
 }
 
-fn condense<T, const N: usize, const M: usize>(vecs: Vec<Vec<T>>) -> Result<[[T; M]; N]> {
+fn devec<T, const N: usize, const M: usize>(vecs: Vec<Vec<T>>) -> Result<[[T; M]; N]> {
     vecs.into_iter()
         .map(TryInto::try_into)
-        .collect::<Result<Vec<_>>_>()?
+        .collect::<Result<Vec<_>>>()?
         .try_into()
 }
 
@@ -75,13 +72,13 @@ impl<const N: usize, const M: usize> OctopiFrame<N, M> {
             }
         }
         while let Some((x, y)) = self.flashing.pop() {
-            let above = if y < M - 1 { y + 1 } else { y };
-            let below = if y > 0 { y - 1 } else { y };
+            let top = if y < M - 1 { y + 1 } else { y };
+            let bottom = if y > 0 { y - 1 } else { y };
             let right = if x < N - 1 { x + 1 } else { x };
             let left = if x > 0 { x - 1 } else { x };
 
             for i in left..=right {
-                for j in below..=above {
+                for j in bottom..=top {
                     if i == x && j == y {
                         continue;
                     }

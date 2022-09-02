@@ -4,20 +4,22 @@
 #![feature(array_zip)]
 #![feature(slice_as_chunks)]
 #![feature(let_chains)]
-use std::{env, time::Instant};
+use std::{
+    env,
+    fs::read_to_string,
+    time::{Duration, Instant},
+};
 
-use types::{Error, Solution};
+use anyhow::Result;
+use types::{Answer, Error, Solution};
 
 mod aoc2021;
 mod types;
 
 fn main() {
-    let filename = if env::args().skip(1).next().is_some() {
-        "test_day"
-    } else {
-        "input_day"
-    };
-    [
+    let puzzle_file = env::args().next().unwrap_or("input".to_string());
+
+    let solvers: [Solution; 12] = [
         aoc2021::day1::solve,
         aoc2021::day2::solve,
         aoc2021::day3::solve,
@@ -30,22 +32,22 @@ fn main() {
         aoc2021::day10::solve,
         aoc2021::day11::solve,
         aoc2021::day12::solve,
-    ]
-    .iter()
-    .enumerate()
-    .map(|(day, solver)| {
-        day += 1; // Days start at 1.
-        let input_path = format!("puzzle_input/{}{}.txt", filename, day);
-        let timer = Instant::now();
-        let result = solver(&input_path);
-        print_results(day, result, timer.elapsed().as_millis());
-    });
+    ];
+
+    (1..12)
+        .zip(solvers)
+        .map(|(day, solver)| play_puzzle(day, puzzle_file, solver));
 }
 
-fn print_results(day: usize, result: Result<(Solution, Solution), Error>, time: u128) {
-    print!("Day {} | ", day);
-    print!("\tTime:   {}ms", time);
-    match result {
+fn play_puzzle(day: usize, puzzle_file_prefix: String, solver: Solution) -> Result<()> {
+    let path = format!("puzzle_input/{filename}_{day}.txt");
+    let input = read_to_string(path)?;
+
+    let timer = Instant::now();
+    let answer = solver(input);
+    let duration = timer.elapsed();
+    print!("Day {day} | Duration {}µs", duration.as_micros());
+    match answer {
         Ok((soln1, soln2)) => {
             print!("\tPart 1: {:?}, ", soln1);
             print!("\tPart 2: {:?}, ", soln2);
@@ -53,4 +55,6 @@ fn print_results(day: usize, result: Result<(Solution, Solution), Error>, time: 
         Err(e) => print!("\tEncountered an Error: {:?}, ", e),
     }
     println!("");
+
+    Ok(())
 }
