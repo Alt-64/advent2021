@@ -5,7 +5,7 @@ use anyhow::Result;
 pub fn solve(input: String) -> Result<(Answer, Answer)> {
     let report = Report::from(input);
     let soln1 = report.part1().ok_or(NoSolutionError.into());
-    let soln2 = report.part2();
+    let soln2 = report.part2().ok_or(NoSolutionError.into());
     Ok((soln1, soln2))
 }
 
@@ -33,28 +33,30 @@ impl Report {
             .collect::<Vec<bool>>();
         let uncommon_bits = common_bits.into_iter().map(|b| !b).collect::<Vec<bool>>();
 
-        let gamma_rate = greek_rate(&common_bits);
-        let epsilon_rate = greek_rate(&uncommon_bits);
+        let gamma_rate = greek_rate(common_bits);
+        let epsilon_rate = greek_rate(uncommon_bits);
 
         Some(gamma_rate * epsilon_rate)
     }
 
-    pub fn part2(&self) -> Result<i64> {
-        let o2_rating = self.chem_rating(most_common_bit).unwrap_or(0);
-        let co2_rating = self.chem_rating(most_common_bit).unwrap_or(0);
+    pub fn part2(&self) -> Option<i64> {
+        let o2_rating = self.chem_rating(most_common_bit)?;
+        let co2_rating = self.chem_rating(|x| !most_common_bit(x))?;
 
-        return Ok(o2_rating * co2_rating);
+        return Some(o2_rating * co2_rating);
     }
 
-    fn chem_rating<'a>(&self, calc_mode: fn(Vec<bool>) -> bool) -> Option<i64> {
+    fn chem_rating<'a>(&self, rate_chem: fn(Vec<bool>) -> bool) -> Option<i64> {
         let Report(rows) = self;
-        let row_len = self.row_len()?;
 
-        get_columns(rows).into_iter().find_map(|col| {
-            let mode = calc_mode(col);
-            let y = rows.into_iter().find(|x| x[col_index] == mode)?;
-            Some(greek_rate(y))
-        })
+        let row = get_columns(rows)
+            .into_iter()
+            .map(rate_chem)
+            .enumerate()
+            .find_map(|(col_index, mode)| rows.iter().find(|row| row[col_index] == mode))?
+            .clone();
+
+        Some(greek_rate(row))
     }
 
     fn row_len(&self) -> Option<usize> {
@@ -80,7 +82,7 @@ fn most_common_bit(bits: Vec<bool>) -> bool {
     return ham_weight >= bits.len() / 2;
 }
 
-fn greek_rate(row: &[bool]) -> i64 {
+fn greek_rate(row: Vec<bool>) -> i64 {
     let bitstring = row
         .iter()
         .map(|&b| i64::from(b).to_string())
@@ -89,8 +91,6 @@ fn greek_rate(row: &[bool]) -> i64 {
 
     return i64::from_str_radix(bitstring.as_str(), 2).unwrap();
 }
-
-fn read_input(input: &str) -> Result<Vec<Vec<bool>>> {}
 
 fn bitstring_to_bools(string: &str) -> Vec<bool> {
     string.chars().map(|c| c == '1').collect()
