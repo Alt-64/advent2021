@@ -1,11 +1,11 @@
 // https://adventofcode.com/2021/day/1
-use std::{fs::read_to_string, num::ParseIntError};
+use std::num::ParseIntError;
 
 use crate::types::Answer;
 use anyhow::Result;
 
-pub fn solve(input: String) -> Result<(Answer, Answer)> {
-    let input = read_input(&input)?;
+pub fn solve(input: &str) -> Result<(Answer, Answer)> {
+    let input = read_input(input)?;
     Ok((part1(&input), part2(&input)))
 }
 

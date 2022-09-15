@@ -1,23 +1,16 @@
-#![feature(custom_test_frameworks)]
-#![feature(iterator_try_reduce)]
-#![feature(hash_drain_filter)]
-#![feature(array_zip)]
-#![feature(slice_as_chunks)]
 #![feature(let_chains)]
-use std::{
-    env,
-    fs::read_to_string,
-    time::{Duration, Instant},
-};
+
+use std::{env, fs::read_to_string, time::Instant};
 
 use anyhow::Result;
-use types::{Answer, Error, Solution};
+use itertools::Itertools;
+use types::Solution;
 
 mod aoc2021;
 mod types;
 
 fn main() {
-    let puzzle_file = env::args().next().unwrap_or("input".to_string());
+    let puzzle_file_prefix = env::args().skip(1).next().unwrap_or("input".to_string());
 
     let solvers: [Solution; 12] = [
         aoc2021::day1::solve,
@@ -34,25 +27,25 @@ fn main() {
         aoc2021::day12::solve,
     ];
 
-    (1..12)
-        .zip(solvers)
-        .map(|(day, solver)| play_puzzle(day, puzzle_file, solver));
+    for (day, solver) in (1..12).zip(solvers) {
+        play_puzzle(day, &puzzle_file_prefix, solver).unwrap();
+    }
 }
 
-fn play_puzzle(day: usize, puzzle_file_prefix: String, solver: Solution) -> Result<()> {
-    let path = format!("puzzle_input/{filename}_{day}.txt");
+fn play_puzzle(day: usize, puzzle_file_prefix: &str, solver: Solution) -> Result<()> {
+    let path = format!("puzzle_input/{puzzle_file_prefix}_day{day}.txt");
     let input = read_to_string(path)?;
 
     let timer = Instant::now();
-    let answer = solver(input);
+    let answer = solver(input.trim());
     let duration = timer.elapsed();
-    print!("Day {day} | Duration {}µs", duration.as_micros());
+    println!("Day {day} | Duration {}µs", duration.as_micros());
     match answer {
         Ok((soln1, soln2)) => {
-            print!("\tPart 1: {:?}, ", soln1);
-            print!("\tPart 2: {:?}, ", soln2);
+            println!("- Part 1: {:?} ", soln1);
+            println!("- Part 2: {:?} ", soln2);
         }
-        Err(e) => print!("\tEncountered an Error: {:?}, ", e),
+        Err(e) => println!("\tEncountered an Error: {:?} ", e),
     }
     println!("");
 

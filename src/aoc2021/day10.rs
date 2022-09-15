@@ -1,44 +1,59 @@
-use std::fs::read_to_string;
-
 use crate::types::Answer;
 use anyhow::Result;
+use itertools::{Either, Itertools};
 
-pub fn solve(path: &str) -> Result<(Answer, Answer)> {
-    let mut soln1 = 0;
-    let mut autocomplete_scores = Vec::new();
+pub fn solve(input: &str) -> Result<(Answer, Answer)> {
+    let (completable_stacks, incompletable_brackets): (Vec<_>, Vec<_>) =
+        input.split("\n").partition_map(is_completable);
 
-    for line in read_to_string(path)?.split("\n").filter(|&s| s != "") {
-        let mut stack = Vec::<char>::new();
-        if let Some(bad_bracket) = has_bad_bracket(line, &mut stack) {
-            soln1 += score_bad(bad_bracket);
-        } else {
-            let score = stack
-                .into_iter()
-                .rev()
-                .fold(0, |acc, curr| acc * 5 + score_autocomplete(curr));
-            autocomplete_scores.push(score);
-        }
-    }
-    autocomplete_scores.sort();
-    let soln2 = autocomplete_scores[autocomplete_scores.len() / 2];
+    let soln1 = part1(incompletable_brackets);
+    let soln2 = part2(completable_stacks);
 
     Ok((Ok(soln1), Ok(soln2)))
 }
 
-fn has_bad_bracket(line: &str, stack: &mut Vec<char>) -> Option<char> {
-    line.chars().find(|&bracket| {
-        if is_open(&bracket) {
-            stack.push(bracket);
-            return false;
-        } else if let Some(left) = stack.pop() {
-            return !pairs_with(left, bracket);
-        } else {
-            return false;
-        }
-    })
+fn is_completable(line: &str) -> Either<Vec<char>, char> {
+    let mut stack = Vec::<char>::new();
+    line.chars()
+        .find(|&bracket| is_bad_bracket(&mut stack, bracket))
+        .ok_or(stack)
+        .into()
 }
 
-fn score_bad(bad_bracket: char) -> i64 {
+fn part1(incompletable_brackets: Vec<char>) -> i64 {
+    incompletable_brackets
+        .into_iter()
+        .map(score_incompletable)
+        .sum()
+}
+
+fn part2(stacks: Vec<Vec<char>>) -> i64 {
+    let mut scores: Vec<_> = stacks.into_iter().map(score_completable_stack).collect();
+    scores.sort();
+    return scores[scores.len() / 2];
+}
+
+fn score_completable_stack(stack: Vec<char>) -> i64 {
+    let mut score = 0;
+    for bracket in stack {
+        score *= 5;
+        score += score_autocomplete(bracket);
+    }
+    return score;
+}
+
+fn is_bad_bracket(stack: &mut Vec<char>, bracket: char) -> bool {
+    if is_open(&bracket) {
+        stack.push(bracket);
+        return false;
+    } else if let Some(left) = stack.pop() {
+        return !pairs_with(left, bracket);
+    } else {
+        return false;
+    }
+}
+
+fn score_incompletable(bad_bracket: char) -> i64 {
     match bad_bracket {
         ')' => 3,
         ']' => 57,
@@ -59,16 +74,9 @@ fn score_autocomplete(bracket: char) -> i64 {
 }
 
 fn pairs_with(b1: char, b2: char) -> bool {
-    match (b1, b2) {
-        ('(', ')') | ('[', ']') | ('{', '}') | ('<', '>') => true,
-        _ => false,
-    }
+    matches!((b1, b2), ('(', ')') | ('[', ']') | ('{', '}') | ('<', '>'))
 }
 
 fn is_open(bracket: &char) -> bool {
-    match bracket {
-        '(' | '[' | '{' | '<' => true,
-        ')' | ']' | '}' | '>' => false,
-        _ => false,
-    }
+    matches!(bracket, '(' | '[' | '{' | '<')
 }

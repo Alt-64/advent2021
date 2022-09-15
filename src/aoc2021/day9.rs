@@ -1,22 +1,22 @@
-use std::fs::read_to_string;
-
 use crate::types::{Answer, BadInputError};
 use anyhow::Result;
+use itertools::iproduct;
 
 type Coordinate = (usize, usize);
 
-pub fn solve(path: &str) -> Result<(Answer, Answer)> {
-    let height_map: Vec<Vec<u8>> = HeightMap::from_file(path)?;
+pub fn solve(input: &str) -> Result<(Answer, Answer)> {
+    let height_map = read_input(input)?;
 
-    let bottom_coords = height_map.get_bottoms();
+    let bottom_coords = get_bottoms(&height_map);
+    let soln2 = part2(&bottom_coords, height_map.clone());
+
     let bottom_heights = bottom_coords
         .iter()
-        .map(|&coord| height_map.get_height_at(coord).unwrap())
+        .map(|&coord| get_height_at(coord, &height_map).unwrap())
         .cloned()
         .collect();
 
     let soln1 = part1(bottom_heights);
-    let soln2 = part2(bottom_coords, height_map);
 
     Ok((Ok(soln1), Ok(soln2)))
 }
@@ -27,113 +27,88 @@ fn part1(bottom_heights: Vec<u8>) -> i64 {
     sum_heights + cumulative_risk_level
 }
 
-fn part2(bottom_coords: Vec<Coordinate>, height_map: Vec<Vec<u8>>) -> i64 {
-    height_map
-        .get_top_basin_sizes(bottom_coords)
-        .iter()
+fn part2(bottom_coords: &Vec<Coordinate>, height_map: Vec<Vec<u8>>) -> i64 {
+    get_top_basin_sizes(bottom_coords, height_map)
+        .into_iter()
         .product::<usize>() as i64
 }
 
-trait HeightMap<T>
-where
-    Self: Sized,
-{
-    fn from_file(path: &str) -> Result<Self>;
-    fn get_height_at(&self, coord: Coordinate) -> Option<&u8>;
-    fn get_mut_height_at(&mut self, coord: Coordinate) -> Option<&mut u8>;
-    fn has_bottom_at(&self, coord: Coordinate) -> bool;
-    fn get_bottoms(&self) -> Vec<Coordinate>;
-    fn get_top_basin_sizes(&self, bottoms: Vec<Coordinate>) -> [usize; 3];
+fn get_height_at((x, y): Coordinate, height_map: &Vec<Vec<u8>>) -> Option<&u8> {
+    height_map.get(y)?.get(x)
 }
 
-impl HeightMap<u8> for Vec<Vec<u8>> {
-    fn from_file(path: &str) -> Result<Self> {
-        read_to_string(path)?
-            .split("\n")
-            .filter(|&s| s != "")
-            .map(read_line)
-            .collect()
-    }
+fn get_mut_height_at((x, y): Coordinate, height_map: &mut Vec<Vec<u8>>) -> Option<&mut u8> {
+    height_map.get_mut(y)?.get_mut(x)
+}
 
-    fn get_height_at(&self, (j, i): Coordinate) -> Option<&u8> {
-        self.get(i)?.get(j)
-    }
+fn get_bottoms(height_map: &Vec<Vec<u8>>) -> Vec<Coordinate> {
+    let h = height_map.len();
+    let w = height_map.first().map(Vec::len).unwrap_or(0);
+    return iproduct!(0..w, 0..h)
+        .filter(|coord| has_bottom_at(*coord, &height_map))
+        .collect();
+}
 
-    fn get_mut_height_at(&mut self, (j, i): Coordinate) -> Option<&mut u8> {
-        self.get_mut(i)?.get_mut(j)
-    }
+fn has_bottom_at((x, y): Coordinate, height_map: &Vec<Vec<u8>>) -> bool {
+    if let Some(height) = get_height_at((x, y), height_map) {
+        let neighbors = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)];
 
-    fn get_bottoms(&self) -> Vec<Coordinate> {
-        let mut low_points = Vec::new();
-        for (y, row) in self.iter().enumerate() {
-            for x in 0..row.len() {
-                if self.has_bottom_at((x, y)) {
-                    low_points.push((x, y));
-                }
+        let lower_neighbor = neighbors
+            .into_iter()
+            .map(|coord| get_height_at(coord, height_map))
+            .flatten()
+            .find(|&h| h <= height);
+
+        return lower_neighbor.is_none();
+    } else {
+        return false;
+    }
+}
+
+fn count_filled(height_map: &Vec<Vec<u8>>) -> usize {
+    height_map
+        .iter()
+        .flatten()
+        .filter(|&&height| height != 9)
+        .count()
+}
+
+fn get_basin_size(coord: Coordinate, height_map: &mut Vec<Vec<u8>>) -> usize {
+    let before = count_filled(&height_map);
+    height_map.fill(coord);
+    let after = count_filled(&height_map);
+
+    return before - after;
+}
+
+fn get_top_basin_sizes(
+    bottom_coords: &Vec<Coordinate>,
+    mut height_map: Vec<Vec<u8>>,
+) -> [usize; 3] {
+    let mut top_basin_sizes = [0; 3];
+    for &bottom in bottom_coords {
+        let curr = get_basin_size(bottom, &mut height_map);
+
+        for basin_size in top_basin_sizes.iter_mut() {
+            if curr > *basin_size {
+                *basin_size = curr;
+                break;
             }
         }
-        low_points
     }
-
-    fn has_bottom_at(&self, (x, y): Coordinate) -> bool {
-        if let Some(height) = self.get_height_at((x, y)) {
-            let neighbors = [
-                x.checked_sub(1).map(|x| (x, y)), // above
-                x.checked_add(1).map(|x| (x, y)), // below
-                y.checked_sub(1).map(|y| (x, y)), // left
-                y.checked_add(1).map(|y| (x, y)), // right
-            ];
-
-            let lower_neighbor = neighbors
-                .into_iter()
-                .flatten()
-                .map(|coord| self.get_height_at(coord))
-                .flatten()
-                .find(|h| *h <= height);
-
-            return lower_neighbor.is_none();
-        } else {
-            return false;
-        }
-    }
-
-    fn get_top_basin_sizes(&self, bottom_coords: Vec<Coordinate>) -> [usize; 3] {
-        let mut top_basin_sizes = [0; 3];
-        let mut clone = self.clone();
-        let count_filled = |clone: &Self| {
-            clone
-                .iter()
-                .flatten()
-                .filter(|&&height| height != 9)
-                .count()
-        };
-        for bottom in bottom_coords {
-            let before = count_filled(&clone);
-            clone.fill(bottom);
-            let after = count_filled(&clone);
-            let curr_basin_size = before - after;
-
-            for basin_size in top_basin_sizes.iter_mut() {
-                if curr_basin_size > *basin_size {
-                    *basin_size = curr_basin_size;
-                    break;
-                }
-            }
-        }
-        top_basin_sizes
-    }
+    top_basin_sizes
 }
 
 impl Floodable<u8> for Vec<Vec<u8>> {
     fn is_target(&self, coord: Coordinate) -> bool {
-        match self.get_height_at(coord) {
+        match get_height_at(coord, self) {
             Some(&height) => height != 9,
             None => false,
         }
     }
 
     fn color(&mut self, coord: Coordinate) {
-        if let Some(height) = self.get_mut_height_at(coord) {
+        if let Some(height) = get_mut_height_at(coord, self) {
             *height = 9;
         }
     }
@@ -146,16 +121,16 @@ enum ScanDirection {
 }
 
 impl ScanDirection {
-    fn opposite(self) -> Self {
-        match self {
-            ScanDirection::Up => ScanDirection::Down,
-            ScanDirection::Down => ScanDirection::Up,
-        }
-    }
     fn next_y(self, y: usize) -> Option<usize> {
         match self {
             ScanDirection::Up => y.checked_sub(1),
             ScanDirection::Down => y.checked_add(1),
+        }
+    }
+    fn reverse(self) -> ScanDirection {
+        match self {
+            ScanDirection::Up => ScanDirection::Down,
+            ScanDirection::Down => ScanDirection::Up,
         }
     }
 }
@@ -205,7 +180,7 @@ trait Floodable<T> {
             // If the current scan has progressed further to the left than it's
             // parent scan, push a 'u-turn' scan in the opposite direction to the left.
             if x < x1 {
-                let ndy = dy.opposite();
+                let ndy = dy.reverse();
                 if let Some(ny) = ndy.next_y(y) {
                     if let Some(nx1) = x1.checked_sub(1).filter(|&nx1| x < nx1) {
                         stack.push((x, nx1, ny, ndy));
@@ -235,7 +210,7 @@ trait Floodable<T> {
                 // If the current scan has progressed further to the right than it's
                 // parent scan, push a 'u-turn' scan in the opposite direction to the right.
                 if x1.saturating_sub(1) > x2 {
-                    let ndy = dy.opposite();
+                    let ndy = dy.reverse();
                     if let Some(ny) = ndy.next_y(y) {
                         let nx2 = x2.saturating_add(1);
                         let nx1 = x1.saturating_sub(1);
@@ -255,53 +230,50 @@ trait Floodable<T> {
     }
 }
 
-fn read_line(line: &str) -> Result<Vec<u8>> {
-    line.chars()
-        .map(|c| {
-            let x = c.to_digit(10).ok_or(BadInputError(c.to_string()))?;
-            Ok(x as u8)
-        })
-        .collect::<Result<Vec<_>, _>>()
-}
-
 // Debugging print functions below
 
-fn print_basin(h1: &Vec<Vec<u8>>, h2: Option<&Vec<Vec<u8>>>, bottom: Coordinate) {
+fn print_basin(
+    h1: &Vec<Vec<u8>>,
+    h2: Option<&Vec<Vec<u8>>>,
+    x_radius: Option<usize>,
+    y_radius: Option<usize>,
+    bottom: Coordinate,
+) {
     let (x, y) = bottom;
-    let xr = 30;
-    let yr = 6;
-    let x1 = x.checked_sub(xr).unwrap_or(0);
+
+    let x_radius = x_radius.unwrap_or(30);
+    let y_radius = y_radius.unwrap_or(6);
+
+    let x1 = x.checked_sub(x_radius).unwrap_or(0);
+    let y1 = y.checked_sub(y_radius).unwrap_or(0);
+
     let x2 = x
-        .checked_add(xr)
-        .filter(|x| *x <= h1[0].len())
+        .checked_add(x_radius)
+        .filter(|&x| x <= h1[0].len())
         .unwrap_or(h1.len());
-    let y1 = y.checked_sub(yr).unwrap_or(0);
     let y2 = y
-        .checked_add(yr)
-        .filter(|y| *y <= h1.len())
+        .checked_add(y_radius)
+        .filter(|&y| y <= h1.len())
         .unwrap_or(h1.len());
+
     for i in y1..y2 {
         print!("{i:02} | ");
         for j in x1..x2 {
-            if *h1.get_height_at((j, i)).unwrap() == 9 {
-                print!("  ");
+            if h1[i][j] == 9 {
+                print!(" ")
             } else if j == x && i == y {
-                print!("\u{001b}[31m{}\u{001b}[0m ", h1[i][j]);
-            } else if let Some(clone) = h2 {
-                if h1[i][j] != clone[i][j] {
-                    print!("\u{001b}[32m{}\u{001b}[0m ", h1[i][j]);
-                } else {
-                    print!("{} ", h1[i][j]);
-                }
+                print!("\u{001b}[31m{}\u{001b}[0m ", h1[i][j])
+            } else if let Some(clone) = h2 && clone[i][j] != h1[i][j] {
+                print!("\u{001b}[32m{}\u{001b}[0m ", h1[i][j])
             } else {
-                print!("{} ", h1[i][j]);
-            }
+                print!("{} ", h1[i][j])
+            };
         }
         println!("");
     }
 }
 
-fn print_cavern(h1: &Vec<Vec<u8>>, h2: Option<&Vec<Vec<u8>>>, bs: Option<&Vec<Coordinate>>) {
+fn print_cavern(h1: &Vec<Vec<u8>>, h2: Option<&Vec<Vec<u8>>>, basin: Option<&Vec<Coordinate>>) {
     println!("");
     print!("  ");
     for j in (0..h1[0].len()).step_by(2) {
@@ -311,19 +283,11 @@ fn print_cavern(h1: &Vec<Vec<u8>>, h2: Option<&Vec<Vec<u8>>>, bs: Option<&Vec<Co
     for i in 0..h1.len() {
         print!("{i:#2} | ");
         for j in 0..h1[i].len() {
-            if let Some(bs) = bs {
-                if bs.contains(&(j, i)) {
-                    print!("\u{001b}[32m*\u{001b}[0m ");
-                    continue;
-                }
-            }
-            if let Some(clone) = h2 {
-                if h1[i][j] != clone[i][j] {
-                    print!("\u{001b}[34m{}\u{001b}[0m ", h1[i][j]);
-                    continue;
-                }
-            }
-            if h1[i][j] == 9 {
+            if let Some(b) = basin && b.contains(&(j, i)) {
+                print!("\u{001b}[32m*\u{001b}[0m ");
+            } else if let Some(clone) = h2 && clone[i][j] != h1[i][j] {
+                print!("\u{001b}[34m{}\u{001b}[0m ", h1[i][j]);
+            } else if h1[i][j] == 9 {
                 print!("  ");
             } else {
                 print!("{} ", h1[i][j]);
@@ -331,4 +295,18 @@ fn print_cavern(h1: &Vec<Vec<u8>>, h2: Option<&Vec<Vec<u8>>>, bs: Option<&Vec<Co
         }
         println!("");
     }
+}
+
+fn read_input(input: &str) -> Result<Vec<Vec<u8>>, BadInputError> {
+    input
+        .split("\n")
+        .map(read_line)
+        .collect::<Result<Vec<_>, BadInputError>>()
+}
+
+fn read_line(line: &str) -> Result<Vec<u8>, BadInputError> {
+    line.chars()
+        .map(|c| c.to_digit(10).map(|x| x as u8))
+        .collect::<Option<Vec<_>>>()
+        .ok_or(BadInputError(line.to_string()))
 }

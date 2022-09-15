@@ -1,48 +1,48 @@
+use std::num::ParseIntError;
+
 use anyhow::Result;
-use std::fs::read_to_string;
 
 use crate::types::{Answer, NoSolutionError};
 use num::abs;
 
-fn read_input(path: &str) -> Result<Vec<i64>> {
-    read_to_string(path)?
-        .split(',')
-        .map(|line| line.trim().parse::<i64>())
-        .collect::<Result<_, _>>()
-        .map_err(Into::into)
-}
-
-pub fn solve(path: &str) -> Result<(Answer, Answer)> {
-    let crab_positions: Vec<i64> = read_input(path)?;
-    let soln1 = part1(&crab_positions);
-    let soln2 = part2(&crab_positions);
+pub fn solve(input: &str) -> Result<(Answer, Answer)> {
+    let crabs: Vec<i64> = read_input(input)?;
+    let soln1 = part1(&crabs).ok_or(NoSolutionError.into());
+    let soln2 = part2(&crabs).ok_or(NoSolutionError.into());
     Ok((soln1, soln2))
 }
 
-fn part1(crab_positions: &Vec<i64>) -> Result<i64> {
-    let median = crab_positions
-        .get(crab_positions.len() / 2)
-        .ok_or(NoSolutionError)?;
-    let cost = crab_positions.iter().map(|x| abs(x - *median)).sum();
-    Ok(cost)
+fn part1(crabs: &Vec<i64>) -> Option<i64> {
+    let &median = crabs.get(crabs.len() / 2)?;
+    Some(crabs.iter().map(|&crab| get_distance(crab, median)).sum())
 }
 
-fn part2(crab_positions: &Vec<i64>) -> Result<i64> {
-    let max_pos = *crab_positions.iter().max().ok_or(NoSolutionError)?;
-    let min_pos = *crab_positions.iter().min().ok_or(NoSolutionError)?;
-    let mut min_cost = i64::MAX;
-    for pos in min_pos..max_pos + 1 {
-        let mut cost = 0;
-        for crab_pos in crab_positions {
-            cost += part2_fuel_cost(abs(pos - crab_pos))
-        }
-        if cost < min_cost {
-            min_cost = cost;
-        }
-    }
-    Ok(min_cost)
+fn get_distance(x: i64, y: i64) -> i64 {
+    abs(x - y)
 }
 
-fn part2_fuel_cost(dist: i64) -> i64 {
+fn part2(crabs: &Vec<i64>) -> Option<i64> {
+    let min = crabs.iter().min()?.to_owned();
+    let max = crabs.iter().max()?.to_owned();
+
+    return (min..=max).map(|pos| cost_to_move(crabs, pos)).min();
+}
+
+fn cost_to_move(crabs: &Vec<i64>, dest: i64) -> i64 {
+    return crabs
+        .iter()
+        .map(|&crab| get_distance(crab, dest))
+        .map(fuel_cost)
+        .sum();
+}
+
+fn fuel_cost(dist: i64) -> i64 {
     dist.pow(2) - dist * (dist - 1) / 2
+}
+
+fn read_input(input: &str) -> Result<Vec<i64>, ParseIntError> {
+    input
+        .split(',')
+        .map(|line| line.trim().parse::<i64>())
+        .collect::<Result<_, ParseIntError>>()
 }

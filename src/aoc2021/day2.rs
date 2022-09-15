@@ -20,16 +20,16 @@ struct SubCmd {
     distance: i64,
 }
 
-pub fn solve(input: String) -> Result<(Answer, Answer)> {
-    let commands: Vec<&str> = input.split("\n").filter(|&cmd| cmd != "").collect();
+pub fn solve(input: &str) -> Result<(Answer, Answer)> {
+    let commands = read_input(input)?;
 
     Ok((
-        maneuver_sub(&commands, part1_control),
-        maneuver_sub(&commands, part2_control),
+        pilot_sub(&commands, part1_control_system),
+        pilot_sub(&commands, part2_control_system),
     ))
 }
 
-fn part1_control(acc: SubPos, cmd: SubCmd) -> SubPos {
+fn part1_control_system(acc: SubPos, cmd: &SubCmd) -> SubPos {
     match cmd.direction {
         Direction::Forward => SubPos {
             horizontal: acc.horizontal + cmd.distance,
@@ -46,7 +46,7 @@ fn part1_control(acc: SubPos, cmd: SubCmd) -> SubPos {
     }
 }
 
-fn part2_control(acc: SubPos, cmd: SubCmd) -> SubPos {
+fn part2_control_system(acc: SubPos, cmd: &SubCmd) -> SubPos {
     match cmd.direction {
         Direction::Forward => SubPos {
             horizontal: acc.horizontal + cmd.distance,
@@ -64,25 +64,27 @@ fn part2_control(acc: SubPos, cmd: SubCmd) -> SubPos {
     }
 }
 
-fn maneuver_sub(commands: &[&str], control: fn(SubPos, SubCmd) -> SubPos) -> Result<i64> {
-    let mut pos = SubPos {
+fn pilot_sub(commands: &Vec<SubCmd>, maneuver: fn(SubPos, &SubCmd) -> SubPos) -> Result<i64> {
+    let mut position = SubPos {
         horizontal: 0,
         depth: 0,
         aim: 0,
     };
 
     for cmd in commands {
-        pos = control(pos, parse_command(cmd)?)
+        let new_position = maneuver(position, cmd);
+        position = new_position;
     }
 
-    Ok(pos.horizontal * pos.depth)
+    Ok(position.horizontal * position.depth)
 }
 
-fn parse_command<'a>(cmd: &&'a str) -> Result<SubCmd> {
+fn read_input(input: &str) -> Result<Vec<SubCmd>> {
+    input.split("\n").map(parse_command).collect()
+}
+
+fn parse_command(cmd: &str) -> Result<SubCmd> {
     let words = cmd.split(" ").collect::<Vec<&str>>();
-    if words.len() < 2 {
-        return Err(BadInputError(words.join("")))?;
-    }
     let direction = parse_direction(words[0])?;
     let distance = words[1].parse::<i64>()?;
 
@@ -97,6 +99,6 @@ fn parse_direction(dir: &str) -> Result<Direction> {
         "forward" => Direction::Forward,
         "up" => Direction::Up,
         "down" => Direction::Down,
-        _ => return Err(BadInputError(dir.to_string()))?,
+        _ => return Err(BadInputError(dir.to_string()).into()),
     })
 }

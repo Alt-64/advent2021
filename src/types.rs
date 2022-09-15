@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 pub type Answer = anyhow::Result<i64>;
-pub type Solution = fn(String) -> anyhow::Result<(Answer, Answer)>;
+pub type Solution = fn(&str) -> anyhow::Result<(Answer, Answer)>;
 
 #[derive(Debug, Error)]
 pub struct NoSolutionError;
