@@ -82,18 +82,21 @@ fn mark_board(board: &mut BingoBoard, x: i64) {
     }
 }
 
+fn get_completed_row(board: &BingoBoard) -> Option<Vec<BingoSpace>> {
+    board.iter().find(|&row| completed(row)).cloned()
+}
+
+fn get_completed_col(board: &BingoBoard) -> Option<Vec<BingoSpace>> {
+    board
+        .first()?
+        .iter()
+        .enumerate()
+        .map(|(i, _)| get_column(board, i))
+        .find(|col| completed(col))
+}
+
 fn find_completed_set(board: &BingoBoard) -> Option<Vec<BingoSpace>> {
-    if let Some(first_row) = board.first() {
-        let completed_row = board.iter().find(|&row| completed(row)).cloned();
-        let completed_col = first_row
-            .iter()
-            .enumerate()
-            .map(|(i, _)| get_column(board, i))
-            .find(|col| completed(col));
-        completed_row.or(completed_col)
-    } else {
-        None
-    }
+    get_completed_row(board).or_else(|| get_completed_col(board))
 }
 
 fn completed(spaces: &[BingoSpace]) -> bool {

@@ -7,7 +7,7 @@ type Coordinate = (usize, usize);
 pub fn solve(input: &str) -> Result<(Answer, Answer)> {
     let height_map = read_input(input)?;
 
-    let bottom_coords = get_bottoms(&height_map);
+    let bottom_coords = iter_bottoms(&height_map).collect();
     let soln2 = part2(&bottom_coords, height_map.clone());
 
     let bottom_heights = bottom_coords
@@ -41,27 +41,31 @@ fn get_mut_height_at((x, y): Coordinate, height_map: &mut Vec<Vec<u8>>) -> Optio
     height_map.get_mut(y)?.get_mut(x)
 }
 
-fn get_bottoms(height_map: &Vec<Vec<u8>>) -> Vec<Coordinate> {
+fn iter_bottoms<'a>(height_map: &'a Vec<Vec<u8>>) -> impl Iterator<Item = Coordinate> + 'a {
     let h = height_map.len();
     let w = height_map.first().map(Vec::len).unwrap_or(0);
-    return iproduct!(0..w, 0..h)
-        .filter(|coord| has_bottom_at(*coord, &height_map))
-        .collect();
+    iproduct!(0..w, 0..h).filter(move |coord| has_bottom_at(*coord, &height_map))
+}
+
+fn get_surrounding_coords((x, y): Coordinate) -> [Option<Coordinate>; 4] {
+    [
+        (x.checked_add(1), Some(y)),
+        (x.checked_sub(1), Some(y)),
+        (Some(x), y.checked_add(1)),
+        (Some(x), y.checked_sub(1)),
+    ]
+    .map(|(x, y)| Some((x?, y?)))
 }
 
 fn has_bottom_at((x, y): Coordinate, height_map: &Vec<Vec<u8>>) -> bool {
-    if let Some(height) = get_height_at((x, y), height_map) {
-        let neighbors = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)];
-
-        let lower_neighbor = neighbors
+    if let Some(h1) = get_height_at((x, y), height_map) {
+        get_surrounding_coords((x, y))
             .into_iter()
-            .map(|coord| get_height_at(coord, height_map))
             .flatten()
-            .find(|&h| h <= height);
-
-        return lower_neighbor.is_none();
+            .flat_map(|coord| get_height_at(coord, height_map))
+            .all(|h2| h1 <= h2)
     } else {
-        return false;
+        false
     }
 }
 

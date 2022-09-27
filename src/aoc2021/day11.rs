@@ -11,7 +11,7 @@ pub fn solve(input: &str) -> Result<(Answer, Answer)> {
 
     let mut step_counter = 0;
     let mut total_flashes = 0;
-    while state.flashes != 10 * 10 {
+    while state.flashes < 10 * 10 {
         state.flashes = 0;
         state.step();
         step_counter += 1;
@@ -60,10 +60,10 @@ impl OctopiFrame {
             let m = self.octopi.len();
             let n = self.octopi[0].len();
 
-            let top = if y < m - 1 { y + 1 } else { y };
-            let bottom = if y > 0 { y - 1 } else { y };
-            let right = if x < n - 1 { x + 1 } else { x };
-            let left = if x > 0 { x - 1 } else { x };
+            let top = if x < m - 1 { x + 1 } else { x };
+            let bottom = if x > 0 { x - 1 } else { x };
+            let right = if y < n - 1 { y + 1 } else { y };
+            let left = if y > 0 { y - 1 } else { y };
 
             for i in bottom..=top {
                 for j in left..=right {
@@ -72,26 +72,17 @@ impl OctopiFrame {
                     }
                     if self.octopi[i][j] != 0 {
                         self.octopi[i][j] += 1;
-                        self.maybe_flash_octopi(i, j);
                     }
+                    self.maybe_flash_octopi(i, j)
                 }
             }
         }
     }
-
     fn maybe_flash_octopi(&mut self, i: usize, j: usize) {
-        if let Some(flashing_octopus) = maybe_flash_octopus(self.octopi[j][i]) {
+        if self.octopi[i][j] > 9 {
             self.flashes += 1;
             self.flashing.push((i, j));
-            self.octopi[j][i] = flashing_octopus;
+            self.octopi[i][j] = 0;
         }
-    }
-}
-
-fn maybe_flash_octopus(octopus: u32) -> Option<u32> {
-    if octopus > 9 {
-        Some(0)
-    } else {
-        None
     }
 }

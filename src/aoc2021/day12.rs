@@ -1,75 +1,81 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    hash::Hash,
-};
+use std::{collections::HashSet, convert::TryInto, iter::from_fn};
 
-use crate::types::{Answer, BadInputError};
+use crate::types::Answer;
 use anyhow::Result;
+use petgraph::{prelude::GraphMap, Undirected};
 
-#[derive(PartialEq, Eq, Hash, Debug, Clone)]
-enum Cave {
-    Entrance,
-    Exit,
-    Big(String),
-    Small(String),
+type Cave<'a> = &'a str;
+
+fn is_big(cave: Cave) -> bool {
+    cave.len() == 2 && cave.chars().all(|c| c.is_uppercase())
 }
 
-impl Cave {
-    fn is_big(&self) -> bool {
-        matches!(self, Cave::Big(_))
-    }
-
-    fn is_exit(&self) -> bool {
-        matches!(self, Cave::Exit)
-    }
+fn is_small(cave: Cave) -> bool {
+    cave.len() == 2 && cave.chars().all(|c| c.is_lowercase())
 }
 
-impl From<&str> for Cave {
-    fn from(s: &str) -> Self {
-        match s {
-            "start" => Cave::Entrance,
-            "end" => Cave::Exit,
-            s if s.chars().all(char::is_uppercase) => Cave::Big(s.to_string()),
-            s => Cave::Small(s.to_string()),
-        }
-    }
-}
-
-fn next_caves<'a, 'b>(options: &'a HashSet<Cave>, visited: HashSet<Cave>) -> HashSet<&'a Cave> {
-    return options
-        .into_iter()
-        .filter(|cave| !visited.contains(cave) || cave.is_big())
-        .collect::<HashSet<_>>();
-}
-
-fn read_input(input: &str) -> Result<Vec<[Cave; 2]>, Vec<Cave>> {
+fn read_input(input: &str) -> Vec<(Cave, Cave)> {
     input.split("\n").map(parse_line).collect()
 }
 
-fn parse_line(line: &str) -> Result<[Cave; 2], Vec<Cave>> {
-    line.split('-')
-        .map(Cave::from)
-        .collect::<Vec<_>>()
+fn parse_line(line: &str) -> (Cave, Cave) {
+    let [a, b]: [Cave; 2] = line
+        .split('-')
+        .map(|cave_name| Cave::from(cave_name))
+        .collect::<Vec<Cave>>()
         .try_into()
+        .unwrap();
+    (a, b)
+}
+
+fn find_paths<'a, 'b>(
+    graph: &'a GraphMap<Cave<'b>, HashSet<Cave<'b>>, Undirected>,
+    allow_retread: bool,
+) -> impl Iterator<Item = Vec<Cave<'b>>> + 'a {
+    let mut visited = vec!["start"];
+    let mut stack = vec![graph.neighbors("start")];
+    let mut retread = None;
+
+    from_fn(move || {
+        while let Some(children) = stack.last_mut() {
+            match children.next() {
+                Some("end") => {
+                    let path = visited
+                        .iter()
+                        .cloned()
+                        .chain(Some("end"))
+                        .collect::<Vec<Cave>>();
+                    return Some(path);
+                }
+                Some(child) if is_big(child) || !visited.contains(&child) => {
+                    visited.push(child);
+                    stack.push(graph.neighbors(child));
+                }
+                Some(child) if is_small(child) && allow_retread && retread.is_none() => {
+                    retread = Some(child);
+                    visited.push(child);
+                    stack.push(graph.neighbors(child));
+                }
+                Some(_) => (),
+                None => {
+                    match (retread, visited.pop()) {
+                        (Some(a), Some(b)) if a == b => retread = None,
+                        _ => (),
+                    }
+                    stack.pop();
+                }
+            }
+        }
+        None
+    })
 }
 
 pub fn solve(input: &str) -> Result<(Answer, Answer)> {
-    let connections = read_input(input).map_err(|err| BadInputError(format!("{err:?}")))?;
+    let connections = read_input(input);
+    let graph = GraphMap::<Cave, HashSet<Cave>, Undirected>::from_edges(connections);
 
-    let mut map = HashMap::<Cave, HashSet<Cave>>::new();
-    // for [a, b] in connections.iter() {
-    //     map.entry(*a).or_insert_with(HashSet::new).insert(*b);
-    //     map.entry(*b).or_insert_with(HashSet::new).insert(*a);
-    // }
-    // let visited = HashSet::new();
+    let soln1 = find_paths(&graph, false).count() as i64;
+    let soln2 = find_paths(&graph, true).count() as i64;
 
-    let tunnels = Vec::<HashSet<Cave>>::new();
-
-    // let asdf = next_caves(connections.get(Cave::Entrance), &visited);
-    // for x in asdf {
-    //     let qwerty = next_caves(connections.get(Cave::Entrance), &visited);
-    // }
-
-    return Ok((Ok(5), Ok(5)));
+    return Ok((Ok(soln1), Ok(soln2)));
 }

@@ -28,18 +28,15 @@ fn part1(incompletable_brackets: Vec<char>) -> i64 {
 }
 
 fn part2(stacks: Vec<Vec<char>>) -> i64 {
-    let mut scores: Vec<_> = stacks.into_iter().map(score_completable_stack).collect();
+    let mut scores: Vec<_> = stacks.into_iter().map(score_stack).collect();
     scores.sort();
     return scores[scores.len() / 2];
 }
 
-fn score_completable_stack(stack: Vec<char>) -> i64 {
-    let mut score = 0;
-    for bracket in stack {
-        score *= 5;
-        score += score_autocomplete(bracket);
-    }
-    return score;
+fn score_stack(stack: Vec<char>) -> i64 {
+    stack
+        .into_iter()
+        .fold(0, |score, cur| score * 5 + score_autocomplete(cur))
 }
 
 fn is_bad_bracket(stack: &mut Vec<char>, bracket: char) -> bool {
@@ -53,8 +50,8 @@ fn is_bad_bracket(stack: &mut Vec<char>, bracket: char) -> bool {
     }
 }
 
-fn score_incompletable(bad_bracket: char) -> i64 {
-    match bad_bracket {
+fn score_incompletable(bracket: char) -> i64 {
+    match bracket {
         ')' => 3,
         ']' => 57,
         '}' => 1197,
