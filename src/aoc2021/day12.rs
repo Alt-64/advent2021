@@ -1,6 +1,5 @@
 use std::{collections::HashSet, convert::TryInto, iter::from_fn};
 
-use crate::types::Answer;
 use anyhow::Result;
 use petgraph::{prelude::GraphMap, Undirected};
 
@@ -12,6 +11,16 @@ fn is_big(cave: Cave) -> bool {
 
 fn is_small(cave: Cave) -> bool {
     cave.len() == 2 && cave.chars().all(|c| c.is_lowercase())
+}
+
+pub fn solve(input: &str) -> Result<(Answer, Answer)> {
+    let connections = read_input(input);
+    let graph = GraphMap::<Cave, HashSet<Cave>, Undirected>::from_edges(connections);
+
+    let soln1 = find_paths(&graph, false).count() as i64;
+    let soln2 = find_paths(&graph, true).count() as i64;
+
+    return Ok((Box::new(soln1), Box::new(soln2)));
 }
 
 fn read_input(input: &str) -> Vec<(Cave, Cave)> {
@@ -68,14 +77,4 @@ fn find_paths<'a, 'b>(
         }
         None
     })
-}
-
-pub fn solve(input: &str) -> Result<(Answer, Answer)> {
-    let connections = read_input(input);
-    let graph = GraphMap::<Cave, HashSet<Cave>, Undirected>::from_edges(connections);
-
-    let soln1 = find_paths(&graph, false).count() as i64;
-    let soln2 = find_paths(&graph, true).count() as i64;
-
-    return Ok((Ok(soln1), Ok(soln2)));
 }

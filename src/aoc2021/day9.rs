@@ -18,7 +18,7 @@ pub fn solve(input: &str) -> Result<(Answer, Answer)> {
 
     let soln1 = part1(bottom_heights);
 
-    Ok((Ok(soln1), Ok(soln2)))
+    Ok((Box::new(soln1), Box::new(soln2)))
 }
 
 fn part1(bottom_heights: Vec<u8>) -> i64 {

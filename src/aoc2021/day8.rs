@@ -9,14 +9,16 @@ pub fn solve(input: &str) -> Result<(Answer, Answer)> {
     let mut soln1: i64 = 0;
     let mut soln2: i64 = 0;
 
-    // Since segments are stable, that patterns that ordinarily share the
-    // same lit segments will still share those lit segments on the
-    // messed-up displays
+    // The number of segments in a pattern are stable.
+    // i.e. Patterns that share three lit segments on a normal display
+    //      will share three lit segments on a messed-up display.
     // e.g. 7 and 1 ordinarily share two lit segments, so in
-    // the messed up patterns they will still share two lit segments.
+    //      the messed up patterns they will still share two lit segments.
     //
-    // If you sum the number of shared segments a pattern has with the other patterns,
-    // the result will be unique for that pattern.
+    // On it's own, that isn't enough to distinguish a pattern.
+    // However, if you sum together the number of segments
+    // a single pattern shares with all the other patterns,
+    // that sum will be unique for that pattern.
     let segment_relations = HashMap::<usize, &str>::from([
         (36, "0"),
         (15, "1"),
@@ -41,7 +43,7 @@ pub fn solve(input: &str) -> Result<(Answer, Answer)> {
         soln2 += part2(&digits);
     }
 
-    Ok((Ok(soln1), Ok(soln2)))
+    Ok((Box::new(soln1), Box::new(soln2)))
 }
 
 struct Recognizer<'a> {

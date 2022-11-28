@@ -14,10 +14,10 @@ pub fn solve(input: &str) -> Result<(Answer, Answer)> {
     let juvenile_fish: Vec<Fish> = vec![0; mature_fish.len()];
 
     let (fish_sim_1, fish_sim_2) = simulate_fish(mature_fish, juvenile_fish).take(80).tee();
-    let soln1 = fish_sim_1.sum();
-    let soln2 = fish_sim_2.take(256 - 80).sum::<i64>() + soln1;
+    let soln1: i64 = fish_sim_1.sum();
+    let soln2: i64 = fish_sim_2.take(256 - 80).sum::<i64>() + soln1;
 
-    Ok((Ok(soln1), Ok(soln2)))
+    Ok((Box::new(soln1), Box::new(soln2)))
 }
 
 fn get_fish(input: &str) -> Result<Vec<Fish>> {

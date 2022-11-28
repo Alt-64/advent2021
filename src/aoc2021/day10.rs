@@ -9,7 +9,7 @@ pub fn solve(input: &str) -> Result<(Answer, Answer)> {
     let soln1 = part1(incompletable_brackets);
     let soln2 = part2(completable_stacks);
 
-    Ok((Ok(soln1), Ok(soln2)))
+    Ok((Box::new(soln1), Box::new(soln2)))
 }
 
 fn is_completable(line: &str) -> Either<Vec<char>, char> {

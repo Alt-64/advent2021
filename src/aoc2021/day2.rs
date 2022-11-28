@@ -1,7 +1,35 @@
 // https://adventofcode.com/2021/day/2
-
-use crate::types::{Answer, BadInputError};
 use anyhow::Result;
+use std::num::ParseIntError;
+
+use crate::types::Solver;
+
+pub struct Day2 {
+    commands: Vec<SubCmd>,
+}
+
+impl Solver for Day2 {
+    type Soln1 = i64;
+    fn solve_part1(&self) -> Result<i64> {
+        Ok(pilot_sub(&self.commands, part1_control_system))
+    }
+
+    type Soln2 = i64;
+    fn solve_part2(&self) -> Result<Self::Soln2> {
+        Ok(pilot_sub(&self.commands, part2_control_system))
+    }
+}
+
+impl TryFrom<&str> for Day2 {
+    type Error = ParseIntError;
+    fn try_from(input: &str) -> Result<Self, ParseIntError> {
+        input
+            .split("\n")
+            .map(SubCmd::try_from)
+            .collect::<Result<_, _>>()
+            .map(|subcmds| Day2 { commands: subcmds })
+    }
+}
 
 struct SubPos {
     horizontal: i64,
@@ -15,18 +43,35 @@ enum Direction {
     Down,
 }
 
+impl From<&str> for Direction {
+    fn from(value: &str) -> Self {
+        match value {
+            "forward" => Direction::Forward,
+            "up" => Direction::Up,
+            "down" => Direction::Down,
+            _ => panic!(),
+        }
+    }
+}
+
 struct SubCmd {
     direction: Direction,
     distance: i64,
 }
 
-pub fn solve(input: &str) -> Result<(Answer, Answer)> {
-    let commands = read_input(input)?;
+impl TryFrom<&str> for SubCmd {
+    type Error = ParseIntError;
 
-    Ok((
-        pilot_sub(&commands, part1_control_system),
-        pilot_sub(&commands, part2_control_system),
-    ))
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let words = value.split(" ").collect::<Vec<&str>>();
+        let direction = Direction::from(words[0]);
+        let distance = words[1].parse::<i64>()?;
+
+        Ok(SubCmd {
+            direction,
+            distance,
+        })
+    }
 }
 
 fn part1_control_system(acc: SubPos, cmd: &SubCmd) -> SubPos {
@@ -64,7 +109,7 @@ fn part2_control_system(acc: SubPos, cmd: &SubCmd) -> SubPos {
     }
 }
 
-fn pilot_sub(commands: &Vec<SubCmd>, maneuver: fn(SubPos, &SubCmd) -> SubPos) -> Result<i64> {
+fn pilot_sub(commands: &Vec<SubCmd>, maneuver: fn(SubPos, &SubCmd) -> SubPos) -> i64 {
     let mut position = SubPos {
         horizontal: 0,
         depth: 0,
@@ -76,29 +121,5 @@ fn pilot_sub(commands: &Vec<SubCmd>, maneuver: fn(SubPos, &SubCmd) -> SubPos) ->
         position = new_position;
     }
 
-    Ok(position.horizontal * position.depth)
-}
-
-fn read_input(input: &str) -> Result<Vec<SubCmd>> {
-    input.split("\n").map(parse_command).collect()
-}
-
-fn parse_command(cmd: &str) -> Result<SubCmd> {
-    let words = cmd.split(" ").collect::<Vec<&str>>();
-    let direction = parse_direction(words[0])?;
-    let distance = words[1].parse::<i64>()?;
-
-    Ok(SubCmd {
-        direction,
-        distance,
-    })
-}
-
-fn parse_direction(dir: &str) -> Result<Direction> {
-    Ok(match dir {
-        "forward" => Direction::Forward,
-        "up" => Direction::Up,
-        "down" => Direction::Down,
-        _ => return Err(BadInputError(dir.to_string()).into()),
-    })
+    position.horizontal * position.depth
 }

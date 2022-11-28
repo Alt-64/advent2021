@@ -23,7 +23,7 @@ pub fn solve(input: &str) -> Result<(Answer, Answer)> {
     let soln1 = count_overlaps(straights.into_iter());
     let soln2 = count_overlaps(all.into_iter());
 
-    Ok((Ok(soln1), Ok(soln2)))
+    Ok((Box::new(soln1), Box::new(soln2)))
 }
 
 fn get_canvas_size(lines: &Vec<Line>) -> Result<(usize, usize)> {
