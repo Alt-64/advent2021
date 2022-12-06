@@ -1,11 +1,8 @@
 // https://adventofcode.com/2021/day/4
 use std::{convert::TryFrom, num::ParseIntError};
-
 use super::day3::get_column;
-
-use anyhow::Result;
-
 use crate::types::{BadInputError, NoSolutionError, Solver};
+use anyhow::Result;
 
 struct Day4(Bingo);
 
@@ -15,6 +12,7 @@ impl Solver for Day4 {
         let (board, draw) = (&self.0).next().ok_or(NoSolutionError)?;
         Ok(draw * board.count_marked_spaces())
     }
+
     type Soln2 = usize;
     fn solve_part2(&self) -> Result<Self::Soln2> {
         let (board, draw) = self.0.last().ok_or(NoSolutionError)?;

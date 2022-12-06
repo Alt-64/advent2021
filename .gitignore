@@ -1,2 +1,3 @@
-/target
+**/target
 **/dist-newstyle
+**/.DS_Store

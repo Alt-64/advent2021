@@ -1,10 +1,8 @@
 use anyhow::Result;
 use std::{
-    error::Error,
     fmt::{Debug, Display},
     num::ParseIntError,
-    str::FromStr,
-    sync::{self},
+    sync,
 };
 
 use thiserror::Error;
@@ -18,6 +16,8 @@ pub trait Solver: for<'a> TryFrom<&'a str> + Sized {
     type Soln2: Display + Send + Sync;
     fn solve_part1(&self) -> Result<Self::Soln1>;
     fn solve_part2(&self) -> Result<Self::Soln2>;
+    
+    fn solve(input: &str, tx1: Sender<) {}
 }
 
 #[derive(Debug, Error)]

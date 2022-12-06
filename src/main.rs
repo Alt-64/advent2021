@@ -20,6 +20,7 @@ fn main() {
     let puzzle_file_prefix = env::args().skip(1).next().unwrap_or("input".to_string());
     let (tx, rx) = mpsc::channel();
 
+
     let solvers: [fn(&str) -> Result<Solver>; 13] = [
         day1::Day1::try_from,
         day2::Day2::try_from,
@@ -36,7 +37,6 @@ fn main() {
         day13::Day13::try_from,
     ];
     let (tx, rx) = mpsc::channel();
-
     for (day, solver) in (1..=13).zip(solvers) {
         let path = format!("puzzle_input/{puzzle_file_prefix}_day{day}.txt");
         let input = read_to_string(path).unwrap().trim();

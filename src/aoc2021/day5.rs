@@ -1,8 +1,66 @@
-use std::num::ParseIntError;
-
 // https://adventofcode.com/2021/day/5
-use crate::types::{Answer, BadInputError, NoSolutionError};
+
+use std::num::ParseIntError;
+use crate::types::{BadInputError, NoSolutionError, Solver};
 use anyhow::Result;
+
+struct Day5(Vec<(u8, u8)>);
+
+impl Solver for Day5 {
+    type Soln1 = usize;
+    fn solve_part1(&self) -> Result<Self::Soln1> {
+        Ok(count_overlaps(self.0, |(straights, _)| straights))
+    }
+
+    type Soln2 = usize;
+    fn solve_part2(&self) -> Result<Self::Soln2> {
+        Ok(count_overlaps(self.0, |(_, all)| all))
+    }
+}
+
+fn count_overlaps<'a>(canvas: Vec<(u8, u8)>, splitter: fn((u8, u8)) -> u8) -> usize {
+    canvas.into_iter().map(splitter).filter(|&overlap_count| overlap_count >= 2).count()
+}
+
+
+impl TryFrom<&str> for Day5 {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let lines = value
+        .split("\n")
+        .map(read_input_line)
+        .collect::<Result<_, _>>()?;
+        let (x_max, y_max) = get_canvas_size(&lines)?;
+
+        let mut canvas: Vec<Vec<(u8, u8)>> = Canvas::new(x_max, y_max)?;
+        for line in lines {
+            canvas.draw(line);
+        }
+
+        Ok(Day5(canvas.into_iter().flatten().collect()))
+    }
+}
+
+fn read_input_line<'a>(line_str: &'a str) -> Result<Line> {
+    let [a, b]: [Point; 2] = line_str
+        .split(" -> ")
+        .map(read_input_point)
+        .collect::<Result<Vec<Point>>>()?
+        .try_into()
+        .or(Err(BadInputError(line_str.to_string())))?;
+    Ok((a, b))
+}
+
+fn read_input_point<'a>(point_str: &'a str) -> Result<Point> {
+    let [x, y]: [usize; 2] = point_str
+        .split(",")
+        .map(str::parse::<usize>)
+        .collect::<Result<Vec<_>, ParseIntError>>()?
+        .try_into()
+        .or(Err(BadInputError(point_str.to_string())))?;
+    Ok(Point { x, y })
+}
 
 struct Point {
     x: usize,
@@ -10,21 +68,6 @@ struct Point {
 }
 
 type Line = (Point, Point);
-
-pub fn solve(input: &str) -> Result<(Answer, Answer)> {
-    let lines: Vec<Line> = read_input(input)?;
-    let (x_max, y_max) = get_canvas_size(&lines)?;
-
-    let mut canvas: Vec<Vec<(u8, u8)>> = Canvas::new(x_max, y_max)?;
-    canvas.draw(lines);
-
-    let (straights, all): (Vec<u8>, Vec<u8>) = canvas.into_iter().flatten().unzip();
-
-    let soln1 = count_overlaps(straights.into_iter());
-    let soln2 = count_overlaps(all.into_iter());
-
-    Ok((Box::new(soln1), Box::new(soln2)))
-}
 
 fn get_canvas_size(lines: &Vec<Line>) -> Result<(usize, usize)> {
     let (xs, ys): (Vec<usize>, Vec<usize>) = lines
@@ -44,7 +87,7 @@ where
     Self: Sized,
 {
     fn new(x_max: usize, y_max: usize) -> Result<Self>;
-    fn draw(&mut self, lines: Vec<Line>);
+    fn draw(&mut self, line: Line);
     fn draw_horiz(&mut self, x1: usize, y1: usize, x2: usize);
     fn draw_vert(&mut self, x1: usize, y1: usize, y2: usize);
     fn draw_diag(&mut self, a: Point, b: Point);
@@ -57,17 +100,15 @@ impl Canvas for Vec<Vec<(u8, u8)>> {
         Ok(canvas)
     }
 
-    fn draw(&mut self, lines: Vec<Line>) {
-        for line in lines {
-            match line {
-                (Point { x: x1, y: y1 }, Point { x: x2, y: _ }) if x1 == x2 => {
-                    self.draw_horiz(x1, y1, x2)
-                }
-                (Point { x: x1, y: y1 }, Point { x: _, y: y2 }) if y1 == y2 => {
-                    self.draw_vert(x1, y1, y2)
-                }
-                (a, b) => self.draw_diag(a, b),
+    fn draw(&mut self, line: Line) {
+        match line {
+            (Point { x: x1, y: y1 }, Point { x: x2, y: _ }) if x1 == x2 => {
+                self.draw_horiz(x1, y1, x2)
             }
+            (Point { x: x1, y: y1 }, Point { x: _, y: y2 }) if y1 == y2 => {
+                self.draw_vert(x1, y1, y2)
+            }
+            (a, b) => self.draw_diag(a, b),
         }
     }
 
@@ -91,35 +132,4 @@ impl Canvas for Vec<Vec<(u8, u8)>> {
             self[i][j].1 += 1;
         }
     }
-}
-
-fn count_overlaps<'a>(canvas: impl Iterator<Item = u8>) -> i64 {
-    canvas.filter(|&overlap_count| overlap_count >= 2).count() as i64
-}
-
-fn read_input(input: &str) -> Result<Vec<Line>> {
-    input
-        .split("\n")
-        .map(read_input_line)
-        .collect::<Result<Vec<Line>>>()
-}
-
-fn read_input_line<'a>(line_str: &'a str) -> Result<Line> {
-    let [a, b]: [Point; 2] = line_str
-        .split(" -> ")
-        .map(read_input_point)
-        .collect::<Result<Vec<Point>>>()?
-        .try_into()
-        .or(Err(BadInputError(line_str.to_string())))?;
-    Ok((a, b))
-}
-
-fn read_input_point<'a>(point_str: &'a str) -> Result<Point> {
-    let [x, y]: [usize; 2] = point_str
-        .split(",")
-        .map(str::parse::<usize>)
-        .collect::<Result<Vec<_>, ParseIntError>>()?
-        .try_into()
-        .or(Err(BadInputError(point_str.to_string())))?;
-    Ok(Point { x, y })
 }
