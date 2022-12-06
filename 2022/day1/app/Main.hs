@@ -4,26 +4,23 @@ import Data.List.Split
 import Data.List
 import Data.Ord
 
-buildblocks :: [String] -> [[String]]
-buildblocks = splitOn [""] 
+type Food = String
+type Calories = Integer
 
-getElfInventories :: String -> [[String]]
-getElfInventories = splitOn [""] <$> splitOn "\n"
+getCalories :: String -> [Calories]
+getCalories input = countCalories <$> getInventories input
 
-countCalories :: [String] -> Integer
-countCalories foods = sum $ map read foods 
+getInventories :: String -> [[Food]]
+getInventories = splitOn [""] <$> splitOn "\n"
 
-solvePart1 :: String -> Integer
-solvePart1 input = maximum $ countCalories <$> getElfInventories input
+countCalories :: [Food] -> Calories
+countCalories foods = sum $ caloriesIn <$> foods 
 
-solvePart2 :: String -> Integer
-solvePart2 input = sum . take 3 . sortBy (comparing Down) $ countCalories <$> getElfInventories input
+caloriesIn :: Food -> Calories
+caloriesIn = read 
 
 main :: IO ()
 main = do
-    input <- getContents 
-    let soln1 = solvePart1 input
-    let soln2 = solvePart2 input
-    putStrLn (show soln1)
-    putStrLn (show soln2)
-    
+    calories <- (sortBy (comparing Down) . getCalories) <$> getContents
+    putStrLn (show $ head $ calories)           -- Part 1
+    putStrLn (show $ sum . take 3 $ calories)   -- Part 2
