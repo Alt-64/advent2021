@@ -17,6 +17,7 @@ getPriority x | isUpper x = ord x - ord 'A' + 27
 
 main :: IO ()
 main = do
-    inventories <- lines <$> getContents
+    input <- getContents
+    let inventories = lines input
     putStrLn . show . sum $ getPriority . getCommonItem . getCompartments <$> inventories
     putStrLn . show . sum $ getPriority . getCommonItem <$> chunksOf 3 inventories

@@ -4,8 +4,8 @@ import Data.List.Split
 import Data.List
 import Data.Ord
 
-getCalories :: String -> [Integer]
-getCalories = fmap countCalories . getInventories 
+getTotalCalories :: String -> [Integer]
+getTotalCalories = fmap countCalories . getInventories 
 
 getInventories :: String -> [[String]]
 getInventories = linesBy (=="") <$> lines
@@ -16,6 +16,7 @@ countCalories foods = sum $ caloriesIn <$> foods
 
 main :: IO ()
 main = do
-    calories <- (sortBy (comparing Down) . getCalories) <$> getContents
+    input <- getContents
+    let calories = sortBy (comparing Down) . getTotalCalories $ input
     putStrLn . show . head $ calories       
     putStrLn . show . sum $ take 3 calories 

@@ -1,12 +1,7 @@
 module Main where
 
-import Data.List.Split
-
 getRound :: String -> (Char, Char)
 getRound str = (head str, last str)
-
-getRounds :: String -> [(Char, Char)]
-getRounds input = getRound <$> lines input
 
 scorePart1 :: (Char, Char) -> Integer
 scorePart1 x = case x of
@@ -36,6 +31,7 @@ scorePart2 x = case x of
 
 main :: IO ()
 main = do
-    rounds <- getRounds <$> getContents
+    input <- getContents
+    let rounds = getRound <$> lines input 
     putStrLn . show . sum $ scorePart1 <$> rounds
     putStrLn . show . sum $ scorePart2 <$> rounds
