@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::{
     fmt::{Debug, Display},
     num::ParseIntError,
-    sync,
+    sync::{self, Mutex},
 };
 
 use thiserror::Error;
@@ -12,12 +12,7 @@ pub type Part = usize;
 pub type SolutionSender<T: Display + Send + Sync> = sync::mpsc::Sender<(Day, Part, Result<T>)>;
 
 pub trait Solver: for<'a> TryFrom<&'a str> + Sized {
-    type Soln1: Display + Send + Sync;
-    type Soln2: Display + Send + Sync;
-    fn solve_part1(&self) -> Result<Self::Soln1>;
-    fn solve_part2(&self) -> Result<Self::Soln2>;
-    
-    fn solve(input: &str, tx1: Sender<) {}
+    fn solve(input: &str, soln1: Mutex<String>, soln2: Mutex<String>) {}
 }
 
 #[derive(Debug, Error)]

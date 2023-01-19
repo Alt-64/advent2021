@@ -18,5 +18,5 @@ main :: IO ()
 main = do
     input <- getContents
     let calories = sortBy (comparing Down) . getTotalCalories $ input
-    putStrLn . show . head $ calories       
+    putStrLn . show . head $ calories 
     putStrLn . show . sum $ take 3 calories 
