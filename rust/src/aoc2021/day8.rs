@@ -1,115 +1,130 @@
-use std::collections::HashMap;
-
-use crate::types::{Answer, BadInputError};
+use crate::types::{BadInputError, SolveState, Solver};
 use anyhow::Result;
 use itertools::Itertools;
+use std::fmt::Debug;
 
 type Segments = usize;
-pub fn solve(input: &str) -> Result<(Answer, Answer)> {
-    let mut soln1: i64 = 0;
-    let mut soln2: i64 = 0;
 
+struct Day8 {
+    state: SolveState,
+    readouts: Vec<String>,
+}
+
+impl Solver<'_> for Day8 {
+    type Soln1 = i64;
+    fn solve_part1(&mut self) -> Self::Soln1 {
+        self.readouts
+            .join("")
+            .chars()
+            .filter(|digit| ['1', '4', '7', '8'].contains(digit))
+            .count() as i64
+    }
+
+    type Soln2 = i64;
+    fn solve_part2(&mut self) -> Self::Soln2 {
+        self.readouts
+            .iter()
+            .map(|x| x.parse::<i64>().unwrap())
+            .sum()
+    }
+}
+
+impl TryFrom<&str> for Day8 {
+    type Error = BadInputError;
+
+    fn try_from(input: &str) -> std::result::Result<Self, Self::Error> {
+        let readouts = input.split('\n').map(read_line).collect::<Result<_, _>>()?;
+
+        Ok(Day8 {
+            state: SolveState::new(),
+            readouts,
+        })
+    }
+}
+
+fn read_line(line: &str) -> Result<String, BadInputError> {
+    let (patterns, readout) = line
+        .split('|')
+        .map(read_patterns)
+        .collect_tuple()
+        .ok_or(BadInputError(line.to_string()))?;
+    readout
+        .into_iter()
+        .map(|pattern| read_bad_pattern(patterns, pattern))
+        .collect::<Result<_, _>>()
+}
+
+fn read_patterns(patts: &str) -> Vec<Segments> {
+    patts.split_whitespace().map(read_segments).collect()
+}
+
+fn read_segments(patt: &str) -> Segments {
+    patt.chars().map(bit_segment_from).sum()
+}
+
+fn bit_segment_from(seg: char) -> Segments {
+    // a -> 0001
+    // b -> 0010
+    // c -> 0100
+    // d -> 1000
+    1 << (seg as usize) - ('a' as usize)
+}
+
+fn read_bad_pattern(
+    patterns: Vec<Segments>,
+    pattern: Segments,
+) -> Result<&'static str, BadInputError> {
+    recognize_segment_count(pattern)
+        .or_else(|| recognize_segment_differences(patterns, pattern))
+        .ok_or(BadInputError(pattern.to_string()))
+}
+
+fn recognize_segment_count(pattern: Segments) -> Option<&'static str> {
+    match pattern.count_ones() {
+        2 => Some("1"),
+        3 => Some("7"),
+        4 => Some("4"),
+        7 => Some("8"),
+        _ => None,
+    }
+}
+
+fn recognize_segment_differences(
+    patterns: Vec<Segments>,
+    pattern: Segments,
+) -> Option<&'static str> {
     // The number of segments in a pattern are stable.
     // i.e. Patterns that share three lit segments on a normal display
     //      will share three lit segments on a messed-up display.
-    // e.g. 7 and 1 ordinarily share two lit segments, so in
+    // e.g. '7' and '1' ordinarily share two lit segments, so in
     //      the messed up patterns they will still share two lit segments.
     //
-    // On it's own, that isn't enough to distinguish a pattern.
+    // On it's own, that isn't enough to distinguish a pattern;
+    // e.g. '3' shares four segments with '2' and a different four segments with '5',
+    //
     // However, if you sum together the number of segments
     // a single pattern shares with all the other patterns,
     // that sum will be unique for that pattern.
-    let segment_relations = HashMap::<usize, &str>::from([
-        (36, "0"),
-        (15, "1"),
-        (29, "2"),
-        (34, "3"),
-        (26, "4"),
-        (32, "5"),
-        (35, "6"),
-        (22, "7"),
-        (42, "8"),
-        (39, "9"),
-    ]);
-
-    for (all_patts, output_patts) in read_input(input) {
-        let recognizer = Recognizer::new(all_patts, &segment_relations);
-        let digits = output_patts
-            .into_iter()
-            .map(|pattern| recognizer.read_bad_pattern(pattern))
-            .collect::<Result<String, BadInputError>>()?;
-
-        soln1 += part1(&digits);
-        soln2 += part2(&digits);
-    }
-
-    Ok((Box::new(soln1), Box::new(soln2)))
-}
-
-struct Recognizer<'a> {
-    patterns: Vec<Segments>,
-    segment_relations: &'a HashMap<usize, &'static str>,
-}
-
-impl<'a> Recognizer<'a> {
-    fn new(patterns: Vec<usize>, segment_relations: &'a HashMap<usize, &'static str>) -> Self {
-        Recognizer {
-            patterns,
-            segment_relations,
-        }
-    }
-
-    fn read_bad_pattern(&self, pattern: Segments) -> Result<&'static str, BadInputError> {
-        Recognizer::recognize_segment_count(pattern)
-            .or_else(|| self.recognize_relations(pattern))
-            .ok_or(BadInputError(pattern.to_string()))
-    }
-
-    fn recognize_segment_count(pattern: Segments) -> Option<&'static str> {
-        match pattern.count_ones() {
-            2 => Some("1"),
-            3 => Some("7"),
-            4 => Some("4"),
-            7 => Some("8"),
-            _ => None,
-        }
-    }
-
-    fn recognize_relations(&self, patt_1: Segments) -> Option<&'static str> {
-        let shares: usize = self.patterns.iter().map(|patt_2| patt_1 & patt_2).sum();
-        return self.segment_relations.get(&shares).map(|&x| x);
+    let patt_1 = pattern;
+    match patterns.iter().map(|patt_2| patt_1 & patt_2).sum() {
+        36 => Some("0"),
+        15 => Some("1"),
+        29 => Some("2"),
+        34 => Some("3"),
+        26 => Some("4"),
+        32 => Some("5"),
+        35 => Some("6"),
+        22 => Some("7"),
+        42 => Some("8"),
+        39 => Some("9"),
+        _ => None,
     }
 }
 
-fn part1(digits: &str) -> i64 {
-    digits
-        .chars()
-        .filter(|digit| ['1', '4', '7', '8'].contains(digit))
-        .count() as i64
-}
+impl Iterator for Day8 {
+    type Item = Box<dyn Debug>;
 
-fn part2(digits: &str) -> i64 {
-    digits.parse::<i64>().unwrap()
-}
-
-fn read_input(input: &str) -> Vec<(Vec<Segments>, Vec<Segments>)> {
-    input.split('\n').map(read_line).collect()
-}
-
-fn read_line(line: &str) -> (Vec<Segments>, Vec<Segments>) {
-    line.split('|').map(read_patterns).collect_tuple().unwrap()
-}
-
-fn read_patterns(patts_str: &str) -> Vec<Segments> {
-    patts_str.split_whitespace().map(read_segments).collect()
-}
-
-fn read_segments(patt_str: &str) -> usize {
-    patt_str.chars().map(bit_segment_from).sum()
-}
-
-// a -> 1, b -> 2, c -> 4, d -> 8
-fn bit_segment_from(char_segment: char) -> Segments {
-    let x = (char_segment as usize) - ('a' as usize);
-    1 << x
+    fn next(&mut self) -> Option<Self::Item> {
+        self.state.next()
+    }
 }

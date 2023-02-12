@@ -3,7 +3,27 @@ use std::{collections::HashSet, convert::TryInto, iter::from_fn};
 use anyhow::Result;
 use petgraph::{prelude::GraphMap, Undirected};
 
+use crate::types::SolveState;
+use std::fmt::Debug;
+
 type Cave<'a> = &'a str;
+
+struct Day12 {
+    state: SolveState,
+}
+
+fn solve(value: &str) -> impl Iterator<Item = Box<dyn Debug>> {
+    let mut graph;
+    from_fn(|| {
+        let mut i = 0;
+        loop {
+            i += 1;
+            match i {
+                0 => {}
+            }
+        }
+    })
+}
 
 fn is_big(cave: Cave) -> bool {
     cave.len() == 2 && cave.chars().all(|c| c.is_uppercase())

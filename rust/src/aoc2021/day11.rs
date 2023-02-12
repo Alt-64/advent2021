@@ -1,8 +1,12 @@
-use crate::types::{Answer, BadInputError};
+use crate::types::{BadInputError, SolveState};
 use anyhow::Result;
 use itertools::iproduct;
 
-pub fn solve(input: &str) -> Result<(Answer, Answer)> {
+struct Day11 {
+    state: SolveState,
+}
+
+pub fn solve(input: &str) -> Result<()> {
     let octopi = read_input(input)?;
     let mut state = OctopiFrame {
         flashes: 0,
@@ -78,6 +82,7 @@ impl OctopiFrame {
             self.octopi[i][j] = 0;
         }
     }
+
     fn print_frame(&self, (x, y): (usize, usize)) {
         let mut block = Vec::new();
         let surrounding: Vec<(usize, usize)> = self.iter_surrounding_octopi((x, y)).collect();

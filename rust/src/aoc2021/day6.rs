@@ -1,63 +1,93 @@
-use std::{iter::from_fn, num::ParseIntError};
+use std::fmt::Debug;
+use std::iter::from_fn;
+use std::iter::FromFn;
+use std::num::ParseIntError;
 
-use crate::types::{Answer, NoSolutionError};
+use crate::types::{BadInputError, SolveState, Solver};
 use anyhow::Result;
-use itertools::Itertools;
 
 const SPAWN_INTERVAL: usize = 7;
 const JUVENILE_PERIOD: usize = 2;
 
-type Fish = i64;
+type Fish = usize;
 
-pub fn solve(input: &str) -> Result<(Answer, Answer)> {
-    let mature_fish = get_fish(input)?;
-    let juvenile_fish: Vec<Fish> = vec![0; mature_fish.len()];
-
-    let (fish_sim_1, fish_sim_2) = simulate_fish(mature_fish, juvenile_fish).take(80).tee();
-    let soln1: i64 = fish_sim_1.sum();
-    let soln2: i64 = fish_sim_2.take(256 - 80).sum::<i64>() + soln1;
-
-    Ok((Box::new(soln1), Box::new(soln2)))
+pub struct Day6 {
+    state: SolveState,
+    sim: FromFn<Box<dyn FnMut() -> Option<usize>>>,
 }
 
-fn get_fish(input: &str) -> Result<Vec<Fish>> {
+impl Solver<'_> for Day6 {
+    type Soln1 = usize;
+    fn solve_part1(&mut self) -> Self::Soln1 {
+        self.sim.take(80).clone().sum()
+    }
+
+    type Soln2 = usize;
+    fn solve_part2(&mut self) -> Self::Soln2 {
+        self.sim.take(256 - 80).sum()
+    }
+}
+
+impl Day6 {
+    fn new(mut mature_fish: Vec<Fish>, mut juvenile_fish: Vec<Fish>) -> Self {
+        let sim = from_fn(move || {
+            for mut day in 0.. {
+                // Today's mature fish spawn new juveniles
+                day %= mature_fish.len();
+                juvenile_fish[day] = mature_fish[day];
+
+                // Juvenile fish that spawned JUVENILE_PERIOD days ago (on day x) mature.
+                let x = (day + SPAWN_INTERVAL - JUVENILE_PERIOD) % SPAWN_INTERVAL; // Adding SPAWN_INTERVAL prevents underflow.
+                mature_fish[day] += juvenile_fish[x];
+                juvenile_fish[x] = 0;
+
+                let count = mature_fish.iter().sum::<usize>() + juvenile_fish.iter().sum::<usize>();
+                return Some(count);
+            }
+            None
+        });
+        Day6 {
+            state: SolveState::new(),
+            sim: Box::new(sim),
+        }
+    }
+}
+
+impl TryFrom<&str> for Day6 {
+    type Error = anyhow::Error;
+
+    fn try_from(input: &str) -> std::result::Result<Self, Self::Error> {
+        let mature_fish: Vec<Fish> = input
+            .split(',')
+            .map(str::parse)
+            .collect::<Result<Vec<_>, ParseIntError>>()?;
+        let mature_fish = to_interval_form(mature_fish)?;
+        let juvenile_fish = vec![0; mature_fish.len()];
+
+        Ok(Day6::new(mature_fish, juvenile_fish))
+    }
+}
+
+fn to_interval_form(original_form: Vec<Fish>) -> Result<Vec<Fish>, BadInputError> {
     // The original form is a growable list of each fish's age.
     // Interval form is a constant size list and tracks how many fish spawned on each day.
     // e.g.
     //     original form: [0, 0, 1, 1, 1, 2, 5]
     //     interval form: [2, 4, 1, 0]
-    let original_form: Vec<usize> = input
-        .split(',')
-        .map(str::parse)
-        .collect::<Result<_, ParseIntError>>()?;
 
-    let interval_len = original_form.iter().max().ok_or(NoSolutionError)?;
+    let interval_len = original_form.iter().max().ok_or(BadInputError)?;
     let mut interval_form = vec![0; interval_len + 1];
     for f in original_form {
-        interval_form[f] += 1
+        interval_form[f] += 1;
     }
 
     Ok(interval_form)
 }
 
-fn simulate_fish(
-    mut mature_fish: Vec<Fish>,
-    mut juvenile_fish: Vec<Fish>,
-) -> impl Iterator<Item = i64> {
-    from_fn(move || {
-        for mut day in 0.. {
-            // Today's mature fish spawn new juveniles
-            day %= mature_fish.len();
-            juvenile_fish[day] = mature_fish[day];
+impl Iterator for Day6 {
+    type Item = Box<dyn Debug>;
 
-            // Fish that spawned JUVENILE_PERIOD days ago mature
-            let j = (day + SPAWN_INTERVAL - JUVENILE_PERIOD) % SPAWN_INTERVAL; // Adding SPAWN_INTERVAL prevents underflow.
-            mature_fish[day] += juvenile_fish[j];
-            juvenile_fish[j] = 0;
-
-            let count = mature_fish.iter().sum::<i64>() + juvenile_fish.iter().sum::<i64>();
-            return Some(count);
-        }
-        None
-    })
+    fn next(&mut self) -> Option<Self::Item> {
+        self.state.next()
+    }
 }

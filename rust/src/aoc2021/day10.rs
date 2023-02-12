@@ -1,15 +1,48 @@
-use crate::types::Answer;
-use anyhow::Result;
 use itertools::{Either, Itertools};
+use std::fmt::Debug;
 
-pub fn solve(input: &str) -> Result<(Answer, Answer)> {
-    let (completable_stacks, incompletable_brackets): (Vec<_>, Vec<_>) =
-        input.split("\n").partition_map(is_completable);
+use crate::types::{BadInputError, SolveState, Solver};
 
-    let soln1 = part1(incompletable_brackets);
-    let soln2 = part2(completable_stacks);
+struct Day10 {
+    state: SolveState,
+    completable_stacks: Vec<Vec<char>>,
+    incompletable_brackets: Vec<char>,
+}
 
-    Ok((Box::new(soln1), Box::new(soln2)))
+impl Solver<'_> for Day10 {
+    type Soln1 = i64;
+    fn solve_part1(&mut self) -> Self::Soln1 {
+        self.incompletable_brackets
+            .into_iter()
+            .map(score_incompletable)
+            .sum()
+    }
+
+    type Soln2 = i64;
+    fn solve_part2(&mut self) -> Self::Soln2 {
+        let mut scores: Vec<_> = self
+            .completable_stacks
+            .into_iter()
+            .map(score_stack)
+            .collect();
+        scores.sort();
+        return scores[scores.len() / 2];
+    }
+}
+
+impl TryFrom<&str> for Day10 {
+    type Error = BadInputError;
+
+    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
+        let (completable_stacks, incompletable_brackets): (Vec<_>, Vec<_>) =
+            value.split("\n").partition_map(is_completable);
+
+        Ok(Day10 {
+            state: SolveState::new(),
+            completable_stacks,
+            incompletable_brackets,
+        })
+    }
 }
 
 fn is_completable(line: &str) -> Either<Vec<char>, char> {
@@ -18,19 +51,6 @@ fn is_completable(line: &str) -> Either<Vec<char>, char> {
         .find(|&bracket| is_bad_bracket(&mut stack, bracket))
         .ok_or(stack)
         .into()
-}
-
-fn part1(incompletable_brackets: Vec<char>) -> i64 {
-    incompletable_brackets
-        .into_iter()
-        .map(score_incompletable)
-        .sum()
-}
-
-fn part2(stacks: Vec<Vec<char>>) -> i64 {
-    let mut scores: Vec<_> = stacks.into_iter().map(score_stack).collect();
-    scores.sort();
-    return scores[scores.len() / 2];
 }
 
 fn score_stack(stack: Vec<char>) -> i64 {
@@ -76,4 +96,12 @@ fn pairs_with(b1: char, b2: char) -> bool {
 
 fn is_open(bracket: &char) -> bool {
     matches!(bracket, '(' | '[' | '{' | '<')
+}
+
+impl Iterator for Day10 {
+    type Item = Box<dyn Debug>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.state.next()
+    }
 }

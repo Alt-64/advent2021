@@ -1,47 +1,40 @@
 // https://adventofcode.com/2021/day/4
-use std::{convert::TryFrom, num::ParseIntError};
-use super::day3::get_column;
-use crate::types::{BadInputError, NoSolutionError, Solver};
+use crate::types::{BadInputError, SolveState, Solver};
 use anyhow::Result;
+use std::fmt::Debug;
+use std::{convert::TryFrom, num::ParseIntError};
 
-struct Day4(Bingo);
-
-impl Solver for Day4 {
-    type Soln1 = usize;
-    fn solve_part1(&self) -> Result<Self::Soln1> {
-        let (board, draw) = (&self.0).next().ok_or(NoSolutionError)?;
-        Ok(draw * board.count_marked_spaces())
-    }
-
-    type Soln2 = usize;
-    fn solve_part2(&self) -> Result<Self::Soln2> {
-        let (board, draw) = self.0.last().ok_or(NoSolutionError)?;
-        Ok(draw * board.count_marked_spaces())
-    }
+pub struct Day4 {
+    state: SolveState,
+    bingo: Box<dyn Iterator<Item = usize>>,
 }
 
 impl TryFrom<&str> for Day4 {
     type Error = anyhow::Error;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let mut inputs = value.split("\n\n");
+        let inputs = value.split("\n\n");
         let first_line = inputs.next().ok_or(BadInputError("No line".to_string()))?;
 
-        let draws = Box::new(read_input_draws(first_line)?.into_iter());
-        let remaining_boards = inputs
-            .map(BingoBoard::try_from)
-            .collect::<Result<Vec<_>, _>>()?;
+        let draws = read_input_draws(first_line)?;
+        let mut players: Vec<_> = inputs.map(Player::try_from).collect::<Result<_, _>>()?;
 
-        let bingo = Bingo {
-            curr_draw: usize::MAX,
-            draws,
-            remaining_boards,
-            winning_boards: Box::new(Vec::new().into_iter()),
-        };
+        Ok(Day4 {
+            state: SolveState::new(),
+            bingo: play_bingo(draws, &mut players),
+        })
+    }
+}
 
-        bingo.play_round().ok_or(NoSolutionError)?;
+impl Solver<'_> for Day4 {
+    type Soln1 = Option<usize>;
+    fn solve_part1(&mut self) -> Option<usize> {
+        self.bingo.next()
+    }
 
-        Ok(Day4(bingo))
+    type Soln2 = Option<usize>;
+    fn solve_part2(&mut self) -> Option<usize> {
+        self.bingo.last()
     }
 }
 
@@ -49,134 +42,119 @@ fn read_input_draws(line: &str) -> Result<Vec<usize>, ParseIntError> {
     line.split(',').map(str::parse).collect()
 }
 
-fn read_input_board_line(line: &str) -> Result<Vec<BingoSpace>, ParseIntError> {
-    line.split_whitespace().map(BingoSpace::try_from).collect()
+fn read_input_board_line(line: &str) -> Result<Vec<(usize, bool)>, ParseIntError> {
+    line.split_whitespace()
+        .map(|value| value.parse::<usize>().map(|value| (value, false)))
+        .collect()
 }
 
-#[derive(Clone, Copy, Debug)]
-struct BingoSpace {
-    value: usize,
-    marked: bool,
+fn read_board(input: &str) -> Result<Vec<Vec<(usize, bool)>>, ParseIntError> {
+    input
+        .split('\n')
+        .map(read_input_board_line)
+        .collect::<Result<_, _>>()
 }
 
-impl BingoSpace {
-    fn new(value: usize) -> Self {
-        BingoSpace {
-            value,
-            marked: false,
+enum Player {
+    Playing(Vec<Vec<(usize, bool)>>),
+    Won(usize),
+}
+
+impl Player {
+    fn play_round(&mut self, draw: usize) {
+        *self = match self {
+            Player::Playing(board) => {
+                mark_cell(board, draw);
+                match get_score(board, draw) {
+                    Some(score) => Player::Won(score),
+                    None => *self,
+                }
+            }
+            Player::Won(_) => *self,
+        }
+    }
+
+    fn has_won(&self) -> Option<usize> {
+        match self {
+            Player::Playing(_) => None,
+            Player::Won(score) => Some(*score),
         }
     }
 }
 
-impl TryFrom<&str> for BingoSpace {
+impl TryFrom<&str> for Player {
     type Error = ParseIntError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        value.parse().map(BingoSpace::new)
+    fn try_from(input: &str) -> std::result::Result<Self, Self::Error> {
+        read_board(input).map(Player::Playing)
     }
 }
 
-struct BingoBoard(Vec<Vec<BingoSpace>>);
-impl BingoBoard {
-    fn mark(&mut self, x: usize) {
-        for row in self.0 {
-            for space in row {
-                if space.value == x {
-                    space.marked = true;
-                    return;
-                }
+fn play_bingo<'a>(
+    draws: Vec<usize>,
+    players: &'a mut Vec<Player>,
+) -> Box<dyn Iterator<Item = usize>> {
+    Box::new(draws.into_iter().flat_map(move |draw| {
+        players.iter_mut().filter_map(|player| {
+            player.play_round(draw);
+            player.has_won()
+        })
+    }))
+}
+
+fn mark_cell(board: &mut Vec<Vec<(usize, bool)>>, draw: usize) {
+    for row in board {
+        for &mut (value, marked) in row {
+            if value == draw {
+                marked = true;
             }
         }
     }
+}
 
-    fn get_completed_row(&self) -> Option<Vec<BingoSpace>> {
-        self.0.iter().find(|&row| completed(row)).cloned()
-    }
+fn get_score(board: &Vec<Vec<(usize, bool)>>, draw: usize) -> Option<usize> {
+    find_completed_set(board).map(|_| draw * count_marked_spaces(board))
+}
 
-    fn get_completed_col(&self) -> Option<Vec<BingoSpace>> {
-        self.0
-            .first()?
-            .iter()
-            .enumerate()
-            .map(|(i, _)| get_column(&self.0, i))
-            .find(|col| completed(col))
-    }
+fn find_completed_set(board: &Vec<Vec<(usize, bool)>>) -> Option<Vec<&(usize, bool)>> {
+    find_completed_row(board).or_else(|| find_completed_col(board))
+}
 
-    fn has_won(&self) -> bool {
-        self.find_completed_set().is_some()
-    }
+fn find_completed_row(board: &Vec<Vec<(usize, bool)>>) -> Option<Vec<&(usize, bool)>> {
+    let completed_row = board
+        .iter()
+        .find(|&&row| completed(row.iter()))?
+        .iter()
+        .collect();
+    Some(completed_row)
+}
 
-    fn find_completed_set(&self) -> Option<Vec<BingoSpace>> {
-        self.get_completed_row()
-            .or_else(|| self.get_completed_col())
-    }
+fn find_completed_col(board: &Vec<Vec<(usize, bool)>>) -> Option<Vec<&(usize, bool)>> {
+    super::day3::get_columns(board)
+        .find(|&col| completed(col))
+        .map(Iterator::collect)
+}
 
-    fn count_marked_spaces(&self) -> usize {
-        let mut count = 0;
-        for row in self.0 {
-            for space in row {
-                if space.marked {
-                    count += 1;
-                }
+fn count_marked_spaces(board: &Vec<Vec<(usize, bool)>>) -> usize {
+    let mut count = 0;
+    for row in board {
+        for &(value, marked) in row {
+            if marked {
+                count += 1;
             }
         }
-        return count;
     }
+    return count;
 }
 
-impl TryFrom<&str> for BingoBoard {
-    type Error = ParseIntError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        value
-            .split('\n')
-            .map(read_input_board_line)
-            .collect::<Result<_, _>>()
-            .map(|board| BingoBoard(board))
-    }
+fn completed<'a>(spaces: impl Iterator<Item = &'a (usize, bool)>) -> bool {
+    spaces.fold(true, |acc, &(cell, marked)| acc && marked)
 }
 
-fn completed(spaces: &[BingoSpace]) -> bool {
-    spaces.iter().fold(true, |acc, space| acc && space.marked)
-}
+impl Iterator for Day4 {
+    type Item = Box<dyn Debug>;
 
-struct Bingo {
-    remaining_boards: Vec<BingoBoard>,
-    winning_boards: Box<dyn Iterator<Item = BingoBoard>>,
-    curr_draw: usize,
-    draws: Box<dyn Iterator<Item = usize>>,
-}
-
-impl Bingo {
-    fn play_round(&mut self) -> Option<()> {
-        self.curr_draw = self.draws.next()?;
-
-        for board in self.remaining_boards {
-            board.mark(self.curr_draw);
-        }
-
-        let (remaining_boards, winning_boards) = self
-            .remaining_boards
-            .into_iter()
-            .partition(|board| board.has_won());
-
-        self.remaining_boards = remaining_boards;
-        self.winning_boards = Box::new(winning_boards.into_iter());
-
-        return Some(());
-    }
-}
-
-impl<'a> Iterator for &'a Bingo {
-    type Item = (&'a BingoBoard, usize);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(board) = self.winning_boards.next() {
-            return Some((&board, self.curr_draw));
-        } else if self.play_round().is_some() {
-            return self.next();
-        } else {
-            return None;
-        }
+    fn next(&mut self) -> Option<Box<dyn Debug>> {
+        self.state.next()
     }
 }

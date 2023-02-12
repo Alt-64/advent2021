@@ -1,44 +1,53 @@
 // https://adventofcode.com/2021/day/5
 
-use std::num::ParseIntError;
-use crate::types::{BadInputError, NoSolutionError, Solver};
+use crate::types::{BadInputError, NoSolutionError, SolveState, Solver};
 use anyhow::Result;
+use std::fmt::Debug;
+use std::num::ParseIntError;
 
-struct Day5(Vec<(u8, u8)>);
-
-impl Solver for Day5 {
-    type Soln1 = usize;
-    fn solve_part1(&self) -> Result<Self::Soln1> {
-        Ok(count_overlaps(self.0, |(straights, _)| straights))
-    }
-
-    type Soln2 = usize;
-    fn solve_part2(&self) -> Result<Self::Soln2> {
-        Ok(count_overlaps(self.0, |(_, all)| all))
-    }
+pub struct Day5 {
+    state: SolveState,
+    canvas: Canvas,
 }
-
-fn count_overlaps<'a>(canvas: Vec<(u8, u8)>, splitter: fn((u8, u8)) -> u8) -> usize {
-    canvas.into_iter().map(splitter).filter(|&overlap_count| overlap_count >= 2).count()
-}
-
 
 impl TryFrom<&str> for Day5 {
     type Error = anyhow::Error;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let lines = value
-        .split("\n")
-        .map(read_input_line)
-        .collect::<Result<_, _>>()?;
+            .split("\n")
+            .map(read_input_line)
+            .collect::<Result<_, _>>()?;
         let (x_max, y_max) = get_canvas_size(&lines)?;
 
-        let mut canvas: Vec<Vec<(u8, u8)>> = Canvas::new(x_max, y_max)?;
-        for line in lines {
-            canvas.draw(line);
-        }
+        Ok(Day5 {
+            state: SolveState::new(),
+            canvas: lines
+                .into_iter()
+                .fold(Canvas::new(x_max, y_max), Canvas::draw_line),
+        })
+    }
+}
 
-        Ok(Day5(canvas.into_iter().flatten().collect()))
+impl Solver<'_> for Day5 {
+    type Soln1 = usize;
+    fn solve_part1(&mut self) -> Self::Soln1 {
+        self.canvas
+            .pixels
+            .into_iter()
+            .map(|(straights, _)| straights)
+            .filter(|&overlap_count| overlap_count >= 2)
+            .count()
+    }
+
+    type Soln2 = usize;
+    fn solve_part2(&mut self) -> Self::Soln2 {
+        self.canvas
+            .pixels
+            .into_iter()
+            .map(|(_, all)| all)
+            .filter(|&overlap_count| overlap_count >= 2)
+            .count()
     }
 }
 
@@ -82,25 +91,22 @@ fn get_canvas_size(lines: &Vec<Line>) -> Result<(usize, usize)> {
     Ok((x_max, y_max))
 }
 
-trait Canvas
-where
-    Self: Sized,
-{
-    fn new(x_max: usize, y_max: usize) -> Result<Self>;
-    fn draw(&mut self, line: Line);
-    fn draw_horiz(&mut self, x1: usize, y1: usize, x2: usize);
-    fn draw_vert(&mut self, x1: usize, y1: usize, y2: usize);
-    fn draw_diag(&mut self, a: Point, b: Point);
+struct Canvas {
+    pixels: Vec<(u8, u8)>,
+    width: usize,
+    height: usize,
 }
 
-impl Canvas for Vec<Vec<(u8, u8)>> {
-    fn new(x_max: usize, y_max: usize) -> Result<Vec<Vec<(u8, u8)>>> {
-        let canvas = vec![vec![(0, 0); (y_max + 1) as usize]; (x_max + 1) as usize];
-
-        Ok(canvas)
+impl Canvas {
+    fn new(width: usize, height: usize) -> Canvas {
+        Canvas {
+            pixels: vec![(0, 0); (height + 1) * (width + 1) as usize],
+            width,
+            height,
+        }
     }
 
-    fn draw(&mut self, line: Line) {
+    fn draw_line(self, line: Line) -> Self {
         match line {
             (Point { x: x1, y: y1 }, Point { x: x2, y: _ }) if x1 == x2 => {
                 self.draw_horiz(x1, y1, x2)
@@ -112,24 +118,41 @@ impl Canvas for Vec<Vec<(u8, u8)>> {
         }
     }
 
-    fn draw_horiz(&mut self, x1: usize, y1: usize, x2: usize) {
+    fn draw_pixel_l(self, x: usize, y: usize) -> Self {
+        self.pixels[y * self.height + x].0 += 1;
+        self
+    }
+
+    fn draw_pixel_r(self, x: usize, y: usize) -> Self {
+        self.pixels[y * self.height + x].1 += 1;
+        self
+    }
+
+    fn draw_horiz(self, x1: usize, y: usize, x2: usize) -> Self {
         for i in x1..x2 {
-            self[i][y1].0 += 1;
+            self = self.draw_pixel_l(i, y);
         }
+        self
     }
 
-    fn draw_vert(&mut self, x1: usize, y1: usize, y2: usize) {
-        for i in y1..y2 {
-            self[x1][i].0 += 1;
+    fn draw_vert(self, x: usize, y1: usize, y2: usize) -> Self {
+        for j in y1..y2 {
+            self = self.draw_pixel_l(x, j);
         }
+        self
     }
 
-    fn draw_diag(&mut self, Point { x: x1, y: y1 }: Point, Point { x: x2, y: y2 }: Point) {
-        let xs = x1..x2;
-        let ys = y1..y2;
-        for (i, j) in xs.zip(ys) {
-            self[i][j].0 += 1;
-            self[i][j].1 += 1;
+    fn draw_diag(self, Point { x: x1, y: y1 }: Point, Point { x: x2, y: y2 }: Point) -> Self {
+        for (i, j) in (x1..x2).zip(y1..y2) {
+            self = self.draw_pixel_l(i, j);
+            self = self.draw_pixel_r(i, j);
         }
+        self
+    }
+}
+impl Iterator for Day5 {
+    type Item = Box<dyn Debug>;
+    fn next(&mut self) -> Option<Box<dyn Debug>> {
+        self.state.next()
     }
 }

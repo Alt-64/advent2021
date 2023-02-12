@@ -1,46 +1,68 @@
 use std::num::ParseIntError;
 
-use anyhow::{anyhow, Result};
+use std::fmt::Debug;
 
-use crate::types::{Answer, NoSolutionError};
-use num::abs;
-
-pub fn solve(input: &str) -> Result<(Answer, Answer)> {
-    let crabs: Vec<i64> = read_input(input)?;
-    let soln1 = part1(&crabs).ok_or(anyhow!(NoSolutionError));
-    let soln2 = part2(&crabs).ok_or(anyhow!(NoSolutionError));
-    Ok((Box::new(soln1), Box::new(soln2)))
+use crate::types::{SolveState, Solver};
+pub struct Day7 {
+    state: SolveState,
+    crabs: Vec<u16>,
 }
 
-fn part1(crabs: &Vec<i64>) -> Option<i64> {
-    let &median = crabs.get(crabs.len() / 2)?;
-    Some(crabs.iter().map(|&crab| get_distance(crab, median)).sum())
+impl Solver<'_> for Day7 {
+    type Soln1 = Option<u16>;
+    fn solve_part1(&mut self) -> Self::Soln1 {
+        let &median_crab = self.crabs.get(self.crabs.len() / 2)?;
+        let distances_to_median_crab = self
+            .crabs
+            .iter()
+            .map(|&crab| get_distance(crab, median_crab))
+            .sum();
+        Some(distances_to_median_crab)
+    }
+
+    type Soln2 = Option<u16>;
+    fn solve_part2(&mut self) -> Self::Soln2 {
+        let min = self.crabs.iter().min().cloned()?;
+        let max = self.crabs.iter().max().cloned()?;
+
+        let minimum_distance_to_align_crabs = (min..=max)
+            .map(|pos| self.crabs.iter().map(|&crab| cost_to_move(crab, pos)).sum())
+            .min();
+        return minimum_distance_to_align_crabs;
+    }
 }
 
-fn get_distance(x: i64, y: i64) -> i64 {
-    abs(x - y)
+fn get_distance(x: u16, y: u16) -> u16 {
+    u16::abs_diff(x, y)
 }
 
-fn part2(crabs: &Vec<i64>) -> Option<i64> {
-    let min = crabs.iter().min()?.to_owned();
-    let max = crabs.iter().max()?.to_owned();
-
-    return (min..=max)
-        .map(|pos| crabs.iter().map(|&crab| cost_to_move(crab, pos)).sum())
-        .min();
-}
-
-fn cost_to_move(crab: i64, dest: i64) -> i64 {
+fn cost_to_move(crab: u16, dest: u16) -> u16 {
     fuel_cost(get_distance(crab, dest))
 }
 
-fn fuel_cost(dist: i64) -> i64 {
+fn fuel_cost(dist: u16) -> u16 {
     dist.pow(2) - dist * (dist - 1) / 2
 }
 
-fn read_input(input: &str) -> Result<Vec<i64>, ParseIntError> {
-    input
-        .split(',')
-        .map(|line| line.trim().parse::<i64>())
-        .collect::<Result<_, ParseIntError>>()
+impl TryFrom<&str> for Day7 {
+    type Error = ParseIntError;
+
+    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
+        let crabs = value
+            .split(',')
+            .map(|line| line.trim().parse::<u16>())
+            .collect::<Result<_, _>>()?;
+        Ok(Day7 {
+            state: SolveState::new(),
+            crabs,
+        })
+    }
+}
+
+impl Iterator for Day7 {
+    type Item = Box<dyn Debug>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.state.next()
+    }
 }

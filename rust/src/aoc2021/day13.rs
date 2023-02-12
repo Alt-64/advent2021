@@ -1,10 +1,6 @@
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{self, Hasher},
-};
+use std::{collections::hash_map::DefaultHasher, hash::Hasher};
 
 use anyhow::Result;
-use itertools::Itertools;
 
 #[derive(Clone, Copy, Debug)]
 enum FoldInstruction {

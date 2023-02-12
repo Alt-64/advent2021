@@ -1,82 +1,101 @@
 // https://adventofcode.com/2021/day/3
-use crate::types::{NoSolutionError, Solver};
+use crate::types::{BadInputError, NoSolutionError, SolveState, Solver};
 use anyhow::Result;
 use itertools::Itertools;
+use std::fmt::Debug;
 
-pub struct Day3(Vec<Vec<bool>>);
+pub struct Day3 {
+    state: SolveState,
+    bit_matrix: Vec<Vec<bool>>,
+}
 
-impl Solver for Day3 {
-    type Soln1 = i64;
-    fn solve_part1(&self) -> Result<i64> {
-        let (common_bits, uncommon_bits) = categorize_bits(&self.0);
+impl TryFrom<&str> for Day3 {
+    type Error = BadInputError;
+    fn try_from(input: &str) -> Result<Day3, BadInputError> {
+        Ok(Day3 {
+            state: SolveState::new(),
+            bit_matrix: input
+                .split("\n")
+                .map(bitstring_to_bools)
+                .collect::<Result<_, _>>()?,
+        })
+    }
+}
 
+impl Solver<'_> for Day3 {
+    type Soln1 = Result<i64>;
+    fn solve_part1(&mut self) -> Self::Soln1 {
+        let common_bits: Vec<_> = get_columns(&self.bit_matrix)
+            .map(|column| get_mode(column.cloned().collect()))
+            .collect();
+
+        let epsilon_rate = greek_rate(common_bits.iter().map(|b| !b).collect());
         let gamma_rate = greek_rate(common_bits);
-        let epsilon_rate = greek_rate(uncommon_bits);
 
-        Ok(gamma_rate * epsilon_rate)
+        Ok(epsilon_rate * gamma_rate)
     }
 
-    type Soln2 = i64;
-    fn solve_part2(&self) -> Result<i64> {
-        let o2_rating = chem_rating(&self.0, most_common_bit).ok_or(NoSolutionError)?;
-        let co2_rating = chem_rating(&self.0, |x| !most_common_bit(x)).ok_or(NoSolutionError)?;
+    type Soln2 = Result<i64>;
+    fn solve_part2(&mut self) -> Self::Soln2 {
+        let columns: Vec<Vec<bool>> = get_columns(&self.bit_matrix)
+            .map(|column| column.cloned().collect())
+            .collect();
+
+        let o2_rating = columns
+            .iter()
+            .find_map(|&column| chem_rating(&self.bit_matrix, get_mode(column)))
+            .ok_or(NoSolutionError)?;
+        let co2_rating = columns
+            .iter()
+            .find_map(|&column| chem_rating(&self.bit_matrix, !get_mode(column)))
+            .ok_or(NoSolutionError)?;
 
         Ok(o2_rating * co2_rating)
     }
 }
 
-impl From<&str> for Day3 {
-    fn from(input: &str) -> Day3 {
-        Day3(input.split("\n").map(bitstring_to_bools).collect())
-    }
+fn bitstring_to_bools(string: &str) -> Result<Vec<bool>, BadInputError> {
+    string
+        .chars()
+        .map(|c| match c {
+            '1' => Ok(true),
+            '0' => Ok(false),
+            _ => Err(BadInputError(c.to_string())),
+        })
+        .collect()
 }
 
-fn bitstring_to_bools(string: &str) -> Vec<bool> {
-    string.chars().map(|c| c == '1').collect()
+pub fn get_columns<'a, T: Copy>(
+    bit_matrix: &'a Vec<Vec<T>>,
+) -> impl Iterator<Item = impl Iterator<Item = &'a T>> {
+    let column_len = bit_matrix.first().map(Vec::len).unwrap_or(0);
+    (0..column_len).map(|column_index| {
+        bit_matrix
+            .iter()
+            .map(move |b| b.get(column_index))
+            .flatten()
+    })
 }
 
-fn categorize_bits(
-    report: &Vec<Vec<bool>>,
-) -> (impl Iterator<Item = bool>, impl Iterator<Item = bool>) {
-    let common_bits = get_columns(report).into_iter().map(most_common_bit);
-    let uncommon_bits = common_bits.clone().map(|b| !b);
-
-    return (common_bits, uncommon_bits);
+fn get_mode(bits: Vec<bool>) -> bool {
+    let weight = bits.iter().map(|&b| usize::from(b)).sum::<usize>();
+    return weight >= bits.len() / 2;
 }
 
-fn get_columns<'a, T: Copy>(rows: &Vec<Vec<T>>) -> Vec<Vec<T>> {
-    (0..col_len(rows))
-        .map(|col_index| get_column(rows, col_index))
-        .collect::<Vec<_>>()
-}
-
-fn col_len<T>(rows: &Vec<Vec<T>>) -> usize {
-    rows.first().map(|col| col.len()).unwrap_or(0).into()
-}
-
-pub fn get_column<'a, T: Copy>(rows: &Vec<Vec<T>>, col_index: usize) -> Vec<T> {
-    rows.into_iter().map(|b| b[col_index]).collect()
-}
-
-fn most_common_bit(bits: Vec<bool>) -> bool {
-    let ham_weight: usize = bits.iter().map(|&b| usize::from(b)).sum();
-    return ham_weight >= bits.len() / 2;
-}
-
-fn greek_rate(i: impl Iterator<Item = bool>) -> i64 {
-    let bitstring = i.map(|b| i64::from(b).to_string()).join("");
-
+fn greek_rate(i: Vec<bool>) -> i64 {
+    let bitstring = i.into_iter().map(|b| i64::from(b).to_string()).join("");
     return i64::from_str_radix(bitstring.as_str(), 2).unwrap();
 }
 
-fn chem_rating<'a>(report: &Vec<Vec<bool>>, rate_chem: fn(Vec<bool>) -> bool) -> Option<i64> {
-    for (i, col) in get_columns(report).into_iter().enumerate() {
-        let rating = rate_chem(col);
-        for row in report {
-            if row.contains(&rating) {
-                return Some(greek_rate(row.iter().cloned()));
-            }
-        }
+fn chem_rating<'a>(bit_matrix: &Vec<Vec<bool>>, column_mode: bool) -> Option<i64> {
+    let &row = bit_matrix.iter().find(|row| row.contains(&column_mode))?;
+    Some(greek_rate(row))
+}
+
+impl Iterator for Day3 {
+    type Item = Box<dyn Debug>;
+
+    fn next(&mut self) -> Option<Box<dyn Debug>> {
+        self.state.next()
     }
-    None
 }

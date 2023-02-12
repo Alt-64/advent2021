@@ -1,33 +1,35 @@
 // https://adventofcode.com/2021/day/2
+use crate::types::{SolveState, Solver};
 use anyhow::Result;
+use std::fmt::Debug;
 use std::num::ParseIntError;
 
-use crate::types::Solver;
-
 pub struct Day2 {
+    state: SolveState,
     commands: Vec<SubCmd>,
 }
-
-impl Solver for Day2 {
-    type Soln1 = i64;
-    fn solve_part1(&self) -> Result<i64> {
-        Ok(pilot_sub(&self.commands, part1_control_system))
-    }
-
-    type Soln2 = i64;
-    fn solve_part2(&self) -> Result<Self::Soln2> {
-        Ok(pilot_sub(&self.commands, part2_control_system))
-    }
-}
-
 impl TryFrom<&str> for Day2 {
     type Error = ParseIntError;
     fn try_from(input: &str) -> Result<Self, ParseIntError> {
-        input
-            .split("\n")
-            .map(SubCmd::try_from)
-            .collect::<Result<_, _>>()
-            .map(|subcmds| Day2 { commands: subcmds })
+        Ok(Day2 {
+            state: SolveState::new(),
+            commands: input
+                .split("\n")
+                .map(SubCmd::try_from)
+                .collect::<Result<_, _>>()?,
+        })
+    }
+}
+
+impl Solver<'_> for Day2 {
+    type Soln1 = i64;
+    fn solve_part1(&mut self) -> Self::Soln1 {
+        pilot_sub(&self.commands, part1_control_system)
+    }
+
+    type Soln2 = i64;
+    fn solve_part2(&mut self) -> Self::Soln2 {
+        pilot_sub(&self.commands, part2_control_system)
     }
 }
 
@@ -74,6 +76,21 @@ impl TryFrom<&str> for SubCmd {
     }
 }
 
+fn pilot_sub(commands: &Vec<SubCmd>, maneuver: fn(SubPos, &SubCmd) -> SubPos) -> i64 {
+    let mut position = SubPos {
+        horizontal: 0,
+        depth: 0,
+        aim: 0,
+    };
+
+    for cmd in commands {
+        let new_position = maneuver(position, cmd);
+        position = new_position;
+    }
+
+    position.horizontal * position.depth
+}
+
 fn part1_control_system(acc: SubPos, cmd: &SubCmd) -> SubPos {
     match cmd.direction {
         Direction::Forward => SubPos {
@@ -109,17 +126,10 @@ fn part2_control_system(acc: SubPos, cmd: &SubCmd) -> SubPos {
     }
 }
 
-fn pilot_sub(commands: &Vec<SubCmd>, maneuver: fn(SubPos, &SubCmd) -> SubPos) -> i64 {
-    let mut position = SubPos {
-        horizontal: 0,
-        depth: 0,
-        aim: 0,
-    };
+impl Iterator for Day2 {
+    type Item = Box<dyn Debug>;
 
-    for cmd in commands {
-        let new_position = maneuver(position, cmd);
-        position = new_position;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.state.next()
     }
-
-    position.horizontal * position.depth
 }

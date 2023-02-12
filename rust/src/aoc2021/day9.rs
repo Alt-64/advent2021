@@ -1,50 +1,56 @@
-use crate::types::{Answer, BadInputError};
+use crate::types::{BadInputError, SolveState, Solver};
 use anyhow::Result;
 use itertools::iproduct;
+use std::fmt::Debug;
 
 type Coordinate = (usize, usize);
+struct Day9 {
+    state: SolveState,
+    height_map: HeightMap,
+    bottom_coords: Vec<(usize, usize)>,
+}
 
-pub fn solve(input: &str) -> Result<(Answer, Answer)> {
-    let height_map = read_input(input)?;
+impl Solver<'_> for Day9 {
+    type Soln1 = i64;
+    fn solve_part1(&mut self) -> Self::Soln1 {
+        let bottom_heights: Vec<_> = self
+            .bottom_coords
+            .iter()
+            .map(|&coord| self.height_map.get_height_at(coord))
+            .flatten()
+            .collect();
+        let sum_heights = bottom_heights.iter().map(|x| *x as i64).sum::<i64>();
+        let cumulative_risk_level = bottom_heights.len() as i64;
+        sum_heights + cumulative_risk_level
+    }
 
-    let bottom_coords = iter_bottoms(&height_map).collect();
-    let soln2 = part2(&bottom_coords, height_map.clone());
+    type Soln2 = usize;
+    fn solve_part2(&mut self) -> Self::Soln2 {
+        get_top_basin_sizes(&self.bottom_coords, self.height_map)
+            .into_iter()
+            .product::<usize>()
+    }
+}
 
-    let bottom_heights = bottom_coords
-        .iter()
-        .map(|&coord| get_height_at(coord, &height_map).unwrap())
-        .cloned()
-        .collect();
+impl TryFrom<&str> for Day9 {
+    type Error = BadInputError;
 
-    let soln1 = part1(bottom_heights);
+    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
+        let height_map = HeightMap::try_from(value)?;
+        let bottom_coords = height_map.iter_bottoms().collect();
 
-    Ok((Box::new(soln1), Box::new(soln2)))
+        Ok(Day9 {
+            state: SolveState::new(),
+            height_map,
+            bottom_coords,
+        })
+    }
 }
 
 fn part1(bottom_heights: Vec<u8>) -> i64 {
     let sum_heights = bottom_heights.iter().map(|x| *x as i64).sum::<i64>();
     let cumulative_risk_level = bottom_heights.len() as i64;
     sum_heights + cumulative_risk_level
-}
-
-fn part2(bottom_coords: &Vec<Coordinate>, height_map: Vec<Vec<u8>>) -> i64 {
-    get_top_basin_sizes(bottom_coords, height_map)
-        .into_iter()
-        .product::<usize>() as i64
-}
-
-fn get_height_at((x, y): Coordinate, height_map: &Vec<Vec<u8>>) -> Option<&u8> {
-    height_map.get(y)?.get(x)
-}
-
-fn get_mut_height_at((x, y): Coordinate, height_map: &mut Vec<Vec<u8>>) -> Option<&mut u8> {
-    height_map.get_mut(y)?.get_mut(x)
-}
-
-fn iter_bottoms<'a>(height_map: &'a Vec<Vec<u8>>) -> impl Iterator<Item = Coordinate> + 'a {
-    let h = height_map.len();
-    let w = height_map.first().map(Vec::len).unwrap_or(0);
-    iproduct!(0..w, 0..h).filter(move |coord| has_bottom_at(*coord, &height_map))
 }
 
 fn get_surrounding_coords((x, y): Coordinate) -> [Option<Coordinate>; 4] {
@@ -57,41 +63,10 @@ fn get_surrounding_coords((x, y): Coordinate) -> [Option<Coordinate>; 4] {
     .map(|(x, y)| Some((x?, y?)))
 }
 
-fn has_bottom_at((x, y): Coordinate, height_map: &Vec<Vec<u8>>) -> bool {
-    if let Some(h1) = get_height_at((x, y), height_map) {
-        get_surrounding_coords((x, y))
-            .into_iter()
-            .flatten()
-            .flat_map(|coord| get_height_at(coord, height_map))
-            .all(|h2| h1 <= h2)
-    } else {
-        false
-    }
-}
-
-fn count_filled(height_map: &Vec<Vec<u8>>) -> usize {
-    height_map
-        .iter()
-        .flatten()
-        .filter(|&&height| height != 9)
-        .count()
-}
-
-fn get_basin_size(coord: Coordinate, height_map: &mut Vec<Vec<u8>>) -> usize {
-    let before = count_filled(&height_map);
-    height_map.fill(coord);
-    let after = count_filled(&height_map);
-
-    return before - after;
-}
-
-fn get_top_basin_sizes(
-    bottom_coords: &Vec<Coordinate>,
-    mut height_map: Vec<Vec<u8>>,
-) -> [usize; 3] {
+fn get_top_basin_sizes(bottom_coords: &Vec<Coordinate>, mut height_map: HeightMap) -> [usize; 3] {
     let mut top_basin_sizes = [0; 3];
     for &bottom in bottom_coords {
-        let curr = get_basin_size(bottom, &mut height_map);
+        let curr = height_map.get_basin_size(bottom);
 
         for basin_size in top_basin_sizes.iter_mut() {
             if curr > *basin_size {
@@ -103,16 +78,72 @@ fn get_top_basin_sizes(
     top_basin_sizes
 }
 
-impl Floodable<u8> for Vec<Vec<u8>> {
+struct HeightMap {
+    map: Vec<u8>,
+    width: usize,
+}
+
+impl TryFrom<&str> for HeightMap {
+    type Error = BadInputError;
+
+    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
+        let map: Vec<Vec<_>> = value.split("\n").map(read_line).collect::<Result<_, _>>()?;
+        let height = map.len();
+        let map: Vec<_> = map.into_iter().flatten().collect();
+        let width = map.len() / height;
+        Ok(HeightMap { map, width })
+    }
+}
+
+impl HeightMap {
+    fn get_height_at(&self, (x, y): Coordinate) -> Option<u8> {
+        self.map.get(y * self.width + x).cloned()
+    }
+
+    fn get_height_at_mut(&self, (x, y): Coordinate) -> Option<&mut u8> {
+        self.map.get_mut(y * self.width + x)
+    }
+
+    fn iter_bottoms<'a>(&'a self) -> impl Iterator<Item = Coordinate> + 'a {
+        let height = self.map.len() / self.width;
+        iproduct!(0..self.width, 0..height).filter(move |coord| self.has_bottom_at(*coord))
+    }
+
+    fn has_bottom_at(&self, (x, y): Coordinate) -> bool {
+        if let Some(h1) = self.get_height_at((x, y)) {
+            get_surrounding_coords((x, y))
+                .into_iter()
+                .flatten()
+                .flat_map(|coord| self.get_height_at(coord))
+                .all(|h2| h1 <= h2)
+        } else {
+            false
+        }
+    }
+
+    fn count_filled(&self) -> usize {
+        self.map.iter().filter(|&&height| height != 9).count()
+    }
+
+    fn get_basin_size(&mut self, coord: Coordinate) -> usize {
+        let before = self.count_filled();
+        self.flood(coord);
+        let after = self.count_filled();
+
+        return before - after;
+    }
+}
+
+impl Floodable<u8> for HeightMap {
     fn is_target(&self, coord: Coordinate) -> bool {
-        match get_height_at(coord, self) {
-            Some(&height) => height != 9,
+        match self.get_height_at(coord) {
+            Some(height) => height != 9,
             None => false,
         }
     }
 
     fn color(&mut self, coord: Coordinate) {
-        if let Some(height) = get_mut_height_at(coord, self) {
+        if let Some(height) = self.get_height_at_mut(coord) {
             *height = 9;
         }
     }
@@ -157,7 +188,7 @@ trait Floodable<T> {
         return x;
     }
 
-    fn fill(&mut self, coord: Coordinate) {
+    fn flood(&mut self, coord: Coordinate) {
         if !self.is_target(coord) {
             return;
         }
@@ -301,16 +332,20 @@ fn print_cavern(h1: &Vec<Vec<u8>>, h2: Option<&Vec<Vec<u8>>>, basin: Option<&Vec
     }
 }
 
-fn read_input(input: &str) -> Result<Vec<Vec<u8>>, BadInputError> {
-    input
-        .split("\n")
-        .map(read_line)
-        .collect::<Result<Vec<_>, BadInputError>>()
-}
-
 fn read_line(line: &str) -> Result<Vec<u8>, BadInputError> {
     line.chars()
-        .map(|c| c.to_digit(10).map(|x| x as u8))
-        .collect::<Option<Vec<_>>>()
-        .ok_or(BadInputError(line.to_string()))
+        .map(|c| {
+            c.to_digit(10)
+                .map(|x| x as u8)
+                .ok_or(BadInputError(c.to_string()))
+        })
+        .collect()
+}
+
+impl Iterator for Day9 {
+    type Item = Box<dyn Debug>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.state.next()
+    }
 }
