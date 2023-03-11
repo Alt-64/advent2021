@@ -1,56 +1,32 @@
-use crate::types::{BadInputError, SolveState, Solver};
-use anyhow::Result;
+use crate::types::{BadInputError, Solution};
+use anyhow::{anyhow, Result};
 use itertools::iproduct;
-use std::fmt::Debug;
+use std::{sync::mpsc::Sender, thread};
 
 type Coordinate = (usize, usize);
-struct Day9 {
-    state: SolveState,
-    height_map: HeightMap,
-    bottom_coords: Vec<(usize, usize)>,
-}
+fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
+    let height_map = HeightMap::try_from(input)?;
+    let bottom_coords: Vec<_> = height_map.iter_bottoms().collect();
 
-impl Solver<'_> for Day9 {
-    type Soln1 = i64;
-    fn solve_part1(&mut self) -> Self::Soln1 {
-        let bottom_heights: Vec<_> = self
-            .bottom_coords
+    let tx_1 = tx.clone();
+    let handle = thread::spawn(move || {
+        let bottom_heights: Vec<_> = bottom_coords
             .iter()
-            .map(|&coord| self.height_map.get_height_at(coord))
+            .map(|&coord| height_map.get_height_at(coord))
             .flatten()
             .collect();
         let sum_heights = bottom_heights.iter().map(|x| *x as i64).sum::<i64>();
         let cumulative_risk_level = bottom_heights.len() as i64;
-        sum_heights + cumulative_risk_level
-    }
+        let soln_1 = sum_heights + cumulative_risk_level;
+        tx_1.send((9, 1, Ok(Box::new(soln_1))))
+    });
 
-    type Soln2 = usize;
-    fn solve_part2(&mut self) -> Self::Soln2 {
-        get_top_basin_sizes(&self.bottom_coords, self.height_map)
-            .into_iter()
-            .product::<usize>()
-    }
-}
+    let soln_2 = get_top_basin_sizes(&bottom_coords, height_map)
+        .into_iter()
+        .product::<usize>();
+    tx.send((9, 2, Ok(Box::new(soln_2))));
 
-impl TryFrom<&str> for Day9 {
-    type Error = BadInputError;
-
-    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
-        let height_map = HeightMap::try_from(value)?;
-        let bottom_coords = height_map.iter_bottoms().collect();
-
-        Ok(Day9 {
-            state: SolveState::new(),
-            height_map,
-            bottom_coords,
-        })
-    }
-}
-
-fn part1(bottom_heights: Vec<u8>) -> i64 {
-    let sum_heights = bottom_heights.iter().map(|x| *x as i64).sum::<i64>();
-    let cumulative_risk_level = bottom_heights.len() as i64;
-    sum_heights + cumulative_risk_level
+    handle.join().unwrap().map_err(|e| anyhow!(e))
 }
 
 fn get_surrounding_coords((x, y): Coordinate) -> [Option<Coordinate>; 4] {
@@ -151,21 +127,24 @@ impl Floodable<u8> for HeightMap {
 
 #[derive(Clone, Copy)]
 enum ScanDirection {
-    Up,
-    Down,
+    Up(usize),
+    Down(usize),
+}
+
+impl Iterator for ScanDirection {
+    fn next(&mut self) -> Option<usize> {
+        match self {
+            ScanDirection::Up(x) => ScanDirection::Up(x.checked_sub(1)?),
+            ScanDirection::Down(x) => ScanDirection::Down(x.checked_add(1)?),
+        }
+    }
 }
 
 impl ScanDirection {
-    fn next_y(self, y: usize) -> Option<usize> {
-        match self {
-            ScanDirection::Up => y.checked_sub(1),
-            ScanDirection::Down => y.checked_add(1),
-        }
-    }
     fn reverse(self) -> ScanDirection {
         match self {
-            ScanDirection::Up => ScanDirection::Down,
-            ScanDirection::Down => ScanDirection::Up,
+            ScanDirection::Up(x) => ScanDirection::Down(x),
+            ScanDirection::Down(x) => ScanDirection::Up(x),
         }
     }
 }
@@ -340,12 +319,4 @@ fn read_line(line: &str) -> Result<Vec<u8>, BadInputError> {
                 .ok_or(BadInputError(c.to_string()))
         })
         .collect()
-}
-
-impl Iterator for Day9 {
-    type Item = Box<dyn Debug>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.state.next()
-    }
 }

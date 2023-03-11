@@ -3,27 +3,9 @@ use std::{collections::HashSet, convert::TryInto, iter::from_fn};
 use anyhow::Result;
 use petgraph::{prelude::GraphMap, Undirected};
 
-use crate::types::SolveState;
 use std::fmt::Debug;
 
 type Cave<'a> = &'a str;
-
-struct Day12 {
-    state: SolveState,
-}
-
-fn solve(value: &str) -> impl Iterator<Item = Box<dyn Debug>> {
-    let mut graph;
-    from_fn(|| {
-        let mut i = 0;
-        loop {
-            i += 1;
-            match i {
-                0 => {}
-            }
-        }
-    })
-}
 
 fn is_big(cave: Cave) -> bool {
     cave.len() == 2 && cave.chars().all(|c| c.is_uppercase())
@@ -33,14 +15,14 @@ fn is_small(cave: Cave) -> bool {
     cave.len() == 2 && cave.chars().all(|c| c.is_lowercase())
 }
 
-pub fn solve(input: &str) -> Result<(Answer, Answer)> {
+pub fn solve(input: &str) -> Result<()> {
     let connections = read_input(input);
     let graph = GraphMap::<Cave, HashSet<Cave>, Undirected>::from_edges(connections);
 
-    let soln1 = find_paths(&graph, false).count() as i64;
-    let soln2 = find_paths(&graph, true).count() as i64;
+    let soln_1 = find_paths(&graph, false).count() as i64;
+    let soln_2 = find_paths(&graph, true).count() as i64;
 
-    return Ok((Box::new(soln1), Box::new(soln2)));
+    return Ok((Box::new(soln_1), Box::new(soln_2)));
 }
 
 fn read_input(input: &str) -> Vec<(Cave, Cave)> {

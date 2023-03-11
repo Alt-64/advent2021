@@ -1,45 +1,22 @@
-use crate::types::{BadInputError, SolveState, Solver};
+use crate::types::{BadInputError, Solution};
 use anyhow::Result;
 use itertools::Itertools;
-use std::fmt::Debug;
+use std::sync::mpsc::Sender;
 
 type Segments = usize;
 
-struct Day8 {
-    state: SolveState,
-    readouts: Vec<String>,
-}
+fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
+    let readouts: Vec<_> = input.split('\n').map(read_line).collect::<Result<_, _>>()?;
+    let soln_1 = readouts
+        .join("")
+        .chars()
+        .filter(|digit| ['1', '4', '7', '8'].contains(digit))
+        .count() as u16;
+    tx.send((8, 1, Ok(Box::new(soln_1))));
+    let soln_2: u16 = readouts.iter().map(|x| x.parse::<u16>().unwrap()).sum();
+    tx.send((8, 2, Ok(Box::new(soln_1))));
 
-impl Solver<'_> for Day8 {
-    type Soln1 = i64;
-    fn solve_part1(&mut self) -> Self::Soln1 {
-        self.readouts
-            .join("")
-            .chars()
-            .filter(|digit| ['1', '4', '7', '8'].contains(digit))
-            .count() as i64
-    }
-
-    type Soln2 = i64;
-    fn solve_part2(&mut self) -> Self::Soln2 {
-        self.readouts
-            .iter()
-            .map(|x| x.parse::<i64>().unwrap())
-            .sum()
-    }
-}
-
-impl TryFrom<&str> for Day8 {
-    type Error = BadInputError;
-
-    fn try_from(input: &str) -> std::result::Result<Self, Self::Error> {
-        let readouts = input.split('\n').map(read_line).collect::<Result<_, _>>()?;
-
-        Ok(Day8 {
-            state: SolveState::new(),
-            readouts,
-        })
-    }
+    Ok(())
 }
 
 fn read_line(line: &str) -> Result<String, BadInputError> {
@@ -118,13 +95,5 @@ fn recognize_segment_differences(
         42 => Some("8"),
         39 => Some("9"),
         _ => None,
-    }
-}
-
-impl Iterator for Day8 {
-    type Item = Box<dyn Debug>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.state.next()
     }
 }

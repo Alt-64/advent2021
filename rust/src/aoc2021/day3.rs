@@ -1,57 +1,42 @@
 // https://adventofcode.com/2021/day/3
-use crate::types::{BadInputError, NoSolutionError, SolveState, Solver};
-use anyhow::Result;
+use crate::types::{expect_soln, BadInputError, Solution};
 use itertools::Itertools;
-use std::fmt::Debug;
+use std::{sync::mpsc::Sender, thread};
 
-pub struct Day3 {
-    state: SolveState,
-    bit_matrix: Vec<Vec<bool>>,
+fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
+    let bit_matrix: Vec<_> = input
+        .split("\n")
+        .map(bitstring_to_bools)
+        .collect::<Result<_, _>>()?;
+
+    let tx_1 = tx.clone();
+    let handle = thread::spawn(move || tx.send((1, 1, expect_soln(part_1(&bit_matrix)))));
+    tx.send((1, 2, expect_soln(part_2(&bit_matrix))))?;
+
+    handle.join().unwrap().map_err(Into::into)
 }
 
-impl TryFrom<&str> for Day3 {
-    type Error = BadInputError;
-    fn try_from(input: &str) -> Result<Day3, BadInputError> {
-        Ok(Day3 {
-            state: SolveState::new(),
-            bit_matrix: input
-                .split("\n")
-                .map(bitstring_to_bools)
-                .collect::<Result<_, _>>()?,
-        })
-    }
+fn part_1(bit_matrix: &Vec<Vec<bool>>) -> Option<i64> {
+    let common_bits: Vec<_> = get_columns(&bit_matrix)
+        .map(|column| get_mode(column.cloned().collect()))
+        .collect();
+
+    let epsilon_rate = greek_rate(common_bits.iter().map(|b| !b).collect());
+    let gamma_rate = greek_rate(common_bits);
+    Some(epsilon_rate * gamma_rate)
 }
 
-impl Solver<'_> for Day3 {
-    type Soln1 = Result<i64>;
-    fn solve_part1(&mut self) -> Self::Soln1 {
-        let common_bits: Vec<_> = get_columns(&self.bit_matrix)
-            .map(|column| get_mode(column.cloned().collect()))
-            .collect();
-
-        let epsilon_rate = greek_rate(common_bits.iter().map(|b| !b).collect());
-        let gamma_rate = greek_rate(common_bits);
-
-        Ok(epsilon_rate * gamma_rate)
-    }
-
-    type Soln2 = Result<i64>;
-    fn solve_part2(&mut self) -> Self::Soln2 {
-        let columns: Vec<Vec<bool>> = get_columns(&self.bit_matrix)
-            .map(|column| column.cloned().collect())
-            .collect();
-
-        let o2_rating = columns
-            .iter()
-            .find_map(|&column| chem_rating(&self.bit_matrix, get_mode(column)))
-            .ok_or(NoSolutionError)?;
-        let co2_rating = columns
-            .iter()
-            .find_map(|&column| chem_rating(&self.bit_matrix, !get_mode(column)))
-            .ok_or(NoSolutionError)?;
-
-        Ok(o2_rating * co2_rating)
-    }
+fn part_2(bit_matrix: &Vec<Vec<bool>>) -> Option<i64> {
+    let columns: Vec<Vec<bool>> = get_columns(&bit_matrix)
+        .map(|column| column.cloned().collect())
+        .collect();
+    let o2_rating = columns
+        .iter()
+        .find_map(|&column| chem_rating(&bit_matrix, get_mode(column)))?;
+    let co2_rating = columns
+        .iter()
+        .find_map(|&column| chem_rating(&bit_matrix, !get_mode(column)))?;
+    Some(o2_rating * co2_rating)
 }
 
 fn bitstring_to_bools(string: &str) -> Result<Vec<bool>, BadInputError> {
@@ -87,15 +72,7 @@ fn greek_rate(i: Vec<bool>) -> i64 {
     return i64::from_str_radix(bitstring.as_str(), 2).unwrap();
 }
 
-fn chem_rating<'a>(bit_matrix: &Vec<Vec<bool>>, column_mode: bool) -> Option<i64> {
-    let &row = bit_matrix.iter().find(|row| row.contains(&column_mode))?;
+fn chem_rating<'a>(bit_matrix: &Vec<Vec<bool>>, mode: bool) -> Option<i64> {
+    let &row = bit_matrix.iter().find(|row| row.contains(&mode))?;
     Some(greek_rate(row))
-}
-
-impl Iterator for Day3 {
-    type Item = Box<dyn Debug>;
-
-    fn next(&mut self) -> Option<Box<dyn Debug>> {
-        self.state.next()
-    }
 }

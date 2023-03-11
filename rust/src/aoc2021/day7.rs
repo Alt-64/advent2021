@@ -1,35 +1,59 @@
-use std::num::ParseIntError;
+use std::thread;
+use std::{num::ParseIntError, sync::mpsc::Sender};
 
-use std::fmt::Debug;
+use crate::types::{expect_soln, Solution};
 
-use crate::types::{SolveState, Solver};
-pub struct Day7 {
-    state: SolveState,
-    crabs: Vec<u16>,
+fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
+    let crabs: Vec<_> = input
+        .split(',')
+        .map(|line| line.trim().parse::<u16>())
+        .collect::<Result<_, _>>()?;
+
+    fork_solve(&read_crabs(input)?, part_1, part_2, tx);
+    let tx_1 = tx.clone();
+    let handle = thread::spawn(move || tx_1.send((7, 1, expect_soln(part_1(&crabs)))));
+    tx.send((7, 2, expect_soln(part_2(&crabs))))?;
+
+    handle.join().unwrap().map_err(Into::into)
 }
 
-impl Solver<'_> for Day7 {
-    type Soln1 = Option<u16>;
-    fn solve_part1(&mut self) -> Self::Soln1 {
-        let &median_crab = self.crabs.get(self.crabs.len() / 2)?;
-        let distances_to_median_crab = self
-            .crabs
-            .iter()
-            .map(|&crab| get_distance(crab, median_crab))
-            .sum();
-        Some(distances_to_median_crab)
-    }
+fn fork_solve<In: Send>(
+    data: In,
+    part_1: impl FnOnce(In) -> Solution,
+    part_2: impl FnOnce(In) -> Solution,
+    tx: Sender<(usize, usize, Solution)>,
+) -> anyhow::Result<()> {
+    let tx_1 = tx.clone();
+    let handle = thread::spawn(move || tx_1.send((7, 1, part_1(data))));
+    tx.send((7, 2, part_2(data)))?;
 
-    type Soln2 = Option<u16>;
-    fn solve_part2(&mut self) -> Self::Soln2 {
-        let min = self.crabs.iter().min().cloned()?;
-        let max = self.crabs.iter().max().cloned()?;
+    handle.join().unwrap().map_err(Into::into)
+}
 
-        let minimum_distance_to_align_crabs = (min..=max)
-            .map(|pos| self.crabs.iter().map(|&crab| cost_to_move(crab, pos)).sum())
-            .min();
-        return minimum_distance_to_align_crabs;
-    }
+fn read_crabs(input: &str) -> Result<Vec<u16>, ParseIntError> {
+    input
+        .split(',')
+        .map(|line| line.trim().parse::<u16>())
+        .collect::<Result<_, _>>()
+}
+
+fn part_1(crabs: &Vec<u16>) -> Option<u16> {
+    let &median_crab = crabs.get(crabs.len() / 2)?;
+    let distances_to_median_crab: u16 = crabs
+        .iter()
+        .map(|&crab| get_distance(crab, median_crab))
+        .sum();
+    Some(distances_to_median_crab)
+}
+
+fn part_2(crabs: &Vec<u16>) -> Option<u16> {
+    let min = crabs.iter().min().cloned()?;
+    let max = crabs.iter().max().cloned()?;
+
+    let minimum_distance_to_align_crabs = (min..=max)
+        .map(|pos| crabs.iter().map(|&crab| cost_to_move(crab, pos)).sum())
+        .min();
+    minimum_distance_to_align_crabs
 }
 
 fn get_distance(x: u16, y: u16) -> u16 {
@@ -44,25 +68,13 @@ fn fuel_cost(dist: u16) -> u16 {
     dist.pow(2) - dist * (dist - 1) / 2
 }
 
-impl TryFrom<&str> for Day7 {
-    type Error = ParseIntError;
+fn print_result(id: &str, result: Result<&str, &str>) -> String {
+    let mid = if result.is_ok() {
+        "\032[1;31mOk \033[0m"
+    } else {
+        "\031[1;31mErr\033[0m"
+    };
+    let end = unsafe { result.unwrap_unchecked() };
 
-    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
-        let crabs = value
-            .split(',')
-            .map(|line| line.trim().parse::<u16>())
-            .collect::<Result<_, _>>()?;
-        Ok(Day7 {
-            state: SolveState::new(),
-            crabs,
-        })
-    }
-}
-
-impl Iterator for Day7 {
-    type Item = Box<dyn Debug>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.state.next()
-    }
+    [id, mid, end].join(" | ")
 }

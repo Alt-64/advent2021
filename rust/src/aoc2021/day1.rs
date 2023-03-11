@@ -1,50 +1,32 @@
 // https://adventofcode.com/2021/day/1
-use anyhow::Result;
-use std::num::ParseIntError;
 
-use crate::types::{SolveState, Solver};
-use std::fmt::Debug;
+use std::{sync::mpsc::Sender, thread};
 
-pub struct Day1 {
-    state: SolveState,
-    depths: Vec<i64>,
+use crate::types::Solution;
+
+pub fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
+    let depths: Vec<_> = input
+        .split("\n")
+        .map(str::parse::<u16>)
+        .collect::<Result<_, _>>()?;
+
+    let tx_1 = tx.clone();
+    let handle = thread::spawn(move || tx_1.send((1, 1, Ok(Box::new(part_1(depths))))));
+    tx.send((1, 1, Ok(Box::new(part_2(depths)))))?;
+
+    handle.join().unwrap().map_err(Into::into)
 }
 
-impl TryFrom<&str> for Day1 {
-    type Error = ParseIntError;
-    fn try_from(input: &str) -> Result<Day1, ParseIntError> {
-        Ok(Day1 {
-            state: SolveState::new(),
-            depths: input
-                .split("\n")
-                .map(str::parse)
-                .collect::<Result<_, _>>()?,
-        })
-    }
+fn part_1(depths: Vec<u16>) -> usize {
+    depths
+        .array_windows::<2>()
+        .filter(|&[left, right]| left < right)
+        .count()
 }
 
-impl Solver<'_> for Day1 {
-    type Soln1 = usize;
-    fn solve_part1(&mut self) -> Self::Soln1 {
-        self.depths
-            .array_windows::<2>()
-            .filter(|&[left, right]| left < right)
-            .count()
-    }
-
-    type Soln2 = usize;
-    fn solve_part2(&mut self) -> Self::Soln2 {
-        self.depths
-            .array_windows::<4>()
-            .filter(|&[left, _, _, right]| left < right)
-            .count()
-    }
-}
-
-impl Iterator for Day1 {
-    type Item = Box<dyn Debug>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.state.next()
-    }
+fn part_2(depths: Vec<u16>) -> usize {
+    depths
+        .array_windows::<4>()
+        .filter(|&[left, _, _, right]| left < right)
+        .count()
 }

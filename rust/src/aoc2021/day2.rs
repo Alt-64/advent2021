@@ -1,42 +1,77 @@
 // https://adventofcode.com/2021/day/2
-use crate::types::{SolveState, Solver};
-use anyhow::Result;
-use std::fmt::Debug;
 use std::num::ParseIntError;
+use std::sync::mpsc::Sender;
+use std::thread;
 
-pub struct Day2 {
-    state: SolveState,
-    commands: Vec<SubCmd>,
-}
-impl TryFrom<&str> for Day2 {
-    type Error = ParseIntError;
-    fn try_from(input: &str) -> Result<Self, ParseIntError> {
-        Ok(Day2 {
-            state: SolveState::new(),
-            commands: input
-                .split("\n")
-                .map(SubCmd::try_from)
-                .collect::<Result<_, _>>()?,
-        })
-    }
-}
+use crate::types::Solution;
 
-impl Solver<'_> for Day2 {
-    type Soln1 = i64;
-    fn solve_part1(&mut self) -> Self::Soln1 {
-        pilot_sub(&self.commands, part1_control_system)
-    }
+fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
+    let commands: Vec<_> = input
+        .split("\n")
+        .map(SubCmd::try_from)
+        .collect::<Result<_, _>>()?;
 
-    type Soln2 = i64;
-    fn solve_part2(&mut self) -> Self::Soln2 {
-        pilot_sub(&self.commands, part2_control_system)
-    }
+    let tx_1 = tx.clone();
+    let handle = thread::spawn(move || tx_1.send((1, 1, Ok(Box::new(part_1(commands))))));
+    tx.send((1, 1, Ok(Box::new(part_2(commands)))))?;
+
+    handle.join().unwrap().map_err(Into::into)
 }
 
+fn part_1(commands: Vec<SubCmd>) -> i64 {
+    let final_pos = commands
+        .iter()
+        .fold(SubPos::default(), |pos, cmd| match cmd.direction {
+            Direction::Forward => SubPos {
+                horizontal: pos.horizontal + cmd.distance,
+                ..pos
+            },
+            Direction::Up => SubPos {
+                depth: pos.depth - cmd.distance,
+                ..pos
+            },
+            Direction::Down => SubPos {
+                depth: pos.depth + cmd.distance,
+                ..pos
+            },
+        });
+    final_pos.horizontal * final_pos.depth
+}
+
+fn part_2(commands: Vec<SubCmd>) -> i64 {
+    let final_pos = commands
+        .iter()
+        .fold(SubPos::default(), |pos, cmd| match cmd.direction {
+            Direction::Forward => SubPos {
+                horizontal: pos.horizontal + cmd.distance,
+                depth: pos.depth + pos.aim * cmd.distance,
+                ..pos
+            },
+            Direction::Up => SubPos {
+                aim: pos.aim - cmd.distance,
+                ..pos
+            },
+            Direction::Down => SubPos {
+                aim: pos.aim + cmd.distance,
+                ..pos
+            },
+        });
+    final_pos.horizontal * final_pos.depth
+}
 struct SubPos {
     horizontal: i64,
     depth: i64,
     aim: i64,
+}
+
+impl Default for SubPos {
+    fn default() -> Self {
+        Self {
+            horizontal: 0,
+            depth: 0,
+            aim: 0,
+        }
+    }
 }
 
 enum Direction {
@@ -73,63 +108,5 @@ impl TryFrom<&str> for SubCmd {
             direction,
             distance,
         })
-    }
-}
-
-fn pilot_sub(commands: &Vec<SubCmd>, maneuver: fn(SubPos, &SubCmd) -> SubPos) -> i64 {
-    let mut position = SubPos {
-        horizontal: 0,
-        depth: 0,
-        aim: 0,
-    };
-
-    for cmd in commands {
-        let new_position = maneuver(position, cmd);
-        position = new_position;
-    }
-
-    position.horizontal * position.depth
-}
-
-fn part1_control_system(acc: SubPos, cmd: &SubCmd) -> SubPos {
-    match cmd.direction {
-        Direction::Forward => SubPos {
-            horizontal: acc.horizontal + cmd.distance,
-            ..acc
-        },
-        Direction::Up => SubPos {
-            depth: acc.depth - cmd.distance,
-            ..acc
-        },
-        Direction::Down => SubPos {
-            depth: acc.depth + cmd.distance,
-            ..acc
-        },
-    }
-}
-
-fn part2_control_system(acc: SubPos, cmd: &SubCmd) -> SubPos {
-    match cmd.direction {
-        Direction::Forward => SubPos {
-            horizontal: acc.horizontal + cmd.distance,
-            depth: acc.depth + acc.aim * cmd.distance,
-            ..acc
-        },
-        Direction::Up => SubPos {
-            aim: acc.aim - cmd.distance,
-            ..acc
-        },
-        Direction::Down => SubPos {
-            aim: acc.aim + cmd.distance,
-            ..acc
-        },
-    }
-}
-
-impl Iterator for Day2 {
-    type Item = Box<dyn Debug>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.state.next()
     }
 }

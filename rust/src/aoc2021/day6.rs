@@ -1,9 +1,9 @@
-use std::fmt::Debug;
 use std::iter::from_fn;
-use std::iter::FromFn;
 use std::num::ParseIntError;
+use std::sync::mpsc::Sender;
 
-use crate::types::{BadInputError, SolveState, Solver};
+use crate::types::BadInputError;
+use crate::types::Solution;
 use anyhow::Result;
 
 const SPAWN_INTERVAL: usize = 7;
@@ -11,61 +11,36 @@ const JUVENILE_PERIOD: usize = 2;
 
 type Fish = usize;
 
-pub struct Day6 {
-    state: SolveState,
-    sim: FromFn<Box<dyn FnMut() -> Option<usize>>>,
-}
+fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
+    let mature_fish: Vec<Fish> = input
+        .split(',')
+        .map(str::parse)
+        .collect::<Result<Vec<_>, ParseIntError>>()?;
+    let mature_fish = to_interval_form(mature_fish)?;
+    let juvenile_fish = vec![0; mature_fish.len()];
 
-impl Solver<'_> for Day6 {
-    type Soln1 = usize;
-    fn solve_part1(&mut self) -> Self::Soln1 {
-        self.sim.take(80).clone().sum()
-    }
+    let sim = from_fn(|| {
+        for mut day in 0.. {
+            // Today's mature fish spawn new juveniles
+            day %= mature_fish.len();
+            juvenile_fish[day] = mature_fish[day];
 
-    type Soln2 = usize;
-    fn solve_part2(&mut self) -> Self::Soln2 {
-        self.sim.take(256 - 80).sum()
-    }
-}
+            // Juvenile fish that spawned JUVENILE_PERIOD days ago (on day x) mature.
+            let x = (day + SPAWN_INTERVAL - JUVENILE_PERIOD) % SPAWN_INTERVAL; // Adding SPAWN_INTERVAL prevents underflow.
+            mature_fish[day] += juvenile_fish[x];
+            juvenile_fish[x] = 0;
 
-impl Day6 {
-    fn new(mut mature_fish: Vec<Fish>, mut juvenile_fish: Vec<Fish>) -> Self {
-        let sim = from_fn(move || {
-            for mut day in 0.. {
-                // Today's mature fish spawn new juveniles
-                day %= mature_fish.len();
-                juvenile_fish[day] = mature_fish[day];
-
-                // Juvenile fish that spawned JUVENILE_PERIOD days ago (on day x) mature.
-                let x = (day + SPAWN_INTERVAL - JUVENILE_PERIOD) % SPAWN_INTERVAL; // Adding SPAWN_INTERVAL prevents underflow.
-                mature_fish[day] += juvenile_fish[x];
-                juvenile_fish[x] = 0;
-
-                let count = mature_fish.iter().sum::<usize>() + juvenile_fish.iter().sum::<usize>();
-                return Some(count);
-            }
-            None
-        });
-        Day6 {
-            state: SolveState::new(),
-            sim: Box::new(sim),
+            let count = mature_fish.iter().sum::<usize>() + juvenile_fish.iter().sum::<usize>();
+            return Some(count);
         }
-    }
-}
+        None
+    });
+    let soln_1: usize = sim.take(80).clone().sum();
+    tx.send((6, 1, Ok(Box::new(soln_1))));
+    let soln_2: usize = sim.take(256 - 80).clone().sum();
+    tx.send((6, 2, Ok(Box::new(soln_2))));
 
-impl TryFrom<&str> for Day6 {
-    type Error = anyhow::Error;
-
-    fn try_from(input: &str) -> std::result::Result<Self, Self::Error> {
-        let mature_fish: Vec<Fish> = input
-            .split(',')
-            .map(str::parse)
-            .collect::<Result<Vec<_>, ParseIntError>>()?;
-        let mature_fish = to_interval_form(mature_fish)?;
-        let juvenile_fish = vec![0; mature_fish.len()];
-
-        Ok(Day6::new(mature_fish, juvenile_fish))
-    }
+    Ok(())
 }
 
 fn to_interval_form(original_form: Vec<Fish>) -> Result<Vec<Fish>, BadInputError> {
@@ -82,12 +57,4 @@ fn to_interval_form(original_form: Vec<Fish>) -> Result<Vec<Fish>, BadInputError
     }
 
     Ok(interval_form)
-}
-
-impl Iterator for Day6 {
-    type Item = Box<dyn Debug>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.state.next()
-    }
 }

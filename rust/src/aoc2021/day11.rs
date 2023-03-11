@@ -1,12 +1,10 @@
-use crate::types::{BadInputError, SolveState};
+use std::sync::mpsc::Sender;
+
+use crate::types::{BadInputError, Solution};
 use anyhow::Result;
 use itertools::iproduct;
 
-struct Day11 {
-    state: SolveState,
-}
-
-pub fn solve(input: &str) -> Result<()> {
+pub fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
     let octopi = read_input(input)?;
     let mut state = OctopiFrame {
         flashes: 0,
@@ -24,7 +22,10 @@ pub fn solve(input: &str) -> Result<()> {
             total_flashes += state.flashes;
         }
     }
-    Ok((Box::new(total_flashes), Box::new(step_counter)))
+
+    tx.send((11, 1, total_flashes))?;
+    tx.send((11, 2, step_counter))?;
+    Ok(())
 }
 
 fn read_input(input: &str) -> Result<Vec<Vec<u32>>, BadInputError> {

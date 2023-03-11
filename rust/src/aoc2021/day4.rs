@@ -1,41 +1,25 @@
 // https://adventofcode.com/2021/day/4
-use crate::types::{BadInputError, SolveState, Solver};
-use anyhow::Result;
-use std::fmt::Debug;
+use crate::types::{expect_soln, BadInputError, NoSolutionError, Solution};
+use std::sync::mpsc::Sender;
 use std::{convert::TryFrom, num::ParseIntError};
 
-pub struct Day4 {
-    state: SolveState,
-    bingo: Box<dyn Iterator<Item = usize>>,
-}
+fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
+    let inputs = input.split("\n\n");
 
-impl TryFrom<&str> for Day4 {
-    type Error = anyhow::Error;
+    let first_line = inputs.next().ok_or(BadInputError("No line".to_string()))?;
+    let draws = read_input_draws(first_line)?;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let inputs = value.split("\n\n");
-        let first_line = inputs.next().ok_or(BadInputError("No line".to_string()))?;
+    let players: Vec<_> = inputs.map(Player::try_from).collect::<Result<_, _>>()?;
 
-        let draws = read_input_draws(first_line)?;
-        let mut players: Vec<_> = inputs.map(Player::try_from).collect::<Result<_, _>>()?;
+    let bingo = play_bingo(draws, &mut players);
 
-        Ok(Day4 {
-            state: SolveState::new(),
-            bingo: play_bingo(draws, &mut players),
-        })
-    }
-}
+    let first_winner = bingo.next();
+    tx.send((4, 1, expect_soln(first_winner)))?;
 
-impl Solver<'_> for Day4 {
-    type Soln1 = Option<usize>;
-    fn solve_part1(&mut self) -> Option<usize> {
-        self.bingo.next()
-    }
+    let last_winner = bingo.last();
+    tx.send((4, 2, expect_soln(last_winner)))?;
 
-    type Soln2 = Option<usize>;
-    fn solve_part2(&mut self) -> Option<usize> {
-        self.bingo.last()
-    }
+    Ok(())
 }
 
 fn read_input_draws(line: &str) -> Result<Vec<usize>, ParseIntError> {
@@ -149,12 +133,4 @@ fn count_marked_spaces(board: &Vec<Vec<(usize, bool)>>) -> usize {
 
 fn completed<'a>(spaces: impl Iterator<Item = &'a (usize, bool)>) -> bool {
     spaces.fold(true, |acc, &(cell, marked)| acc && marked)
-}
-
-impl Iterator for Day4 {
-    type Item = Box<dyn Debug>;
-
-    fn next(&mut self) -> Option<Box<dyn Debug>> {
-        self.state.next()
-    }
 }

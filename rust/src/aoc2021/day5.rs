@@ -1,54 +1,43 @@
 // https://adventofcode.com/2021/day/5
 
-use crate::types::{BadInputError, NoSolutionError, SolveState, Solver};
+use crate::types::{BadInputError, NoSolutionError, Solution};
 use anyhow::Result;
-use std::fmt::Debug;
 use std::num::ParseIntError;
+use std::sync::mpsc::Sender;
+use std::thread;
 
-pub struct Day5 {
-    state: SolveState,
-    canvas: Canvas,
+fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
+    let lines = input
+        .split("\n")
+        .map(read_input_line)
+        .collect::<Result<_, _>>()?;
+    let (x_max, y_max) = get_canvas_size(&lines)?;
+    let canvas = Canvas::new(x_max, y_max);
+
+    let tx_1 = tx.clone();
+    let handle = thread::spawn(move || tx_1.send((5, 1, Ok(Box::new(part_1(canvas))))));
+
+    tx.send((5, 2, Ok(Box::new(part_1(canvas)))))?;
+
+    handle.join().unwrap().map_err(Into::into)
 }
 
-impl TryFrom<&str> for Day5 {
-    type Error = anyhow::Error;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let lines = value
-            .split("\n")
-            .map(read_input_line)
-            .collect::<Result<_, _>>()?;
-        let (x_max, y_max) = get_canvas_size(&lines)?;
-
-        Ok(Day5 {
-            state: SolveState::new(),
-            canvas: lines
-                .into_iter()
-                .fold(Canvas::new(x_max, y_max), Canvas::draw_line),
-        })
-    }
+fn part_1(canvas: Canvas) -> usize {
+    canvas
+        .pixels
+        .iter()
+        .map(|(straights, _)| straights)
+        .filter(|&&overlap_count| overlap_count >= 2)
+        .count()
 }
 
-impl Solver<'_> for Day5 {
-    type Soln1 = usize;
-    fn solve_part1(&mut self) -> Self::Soln1 {
-        self.canvas
-            .pixels
-            .into_iter()
-            .map(|(straights, _)| straights)
-            .filter(|&overlap_count| overlap_count >= 2)
-            .count()
-    }
-
-    type Soln2 = usize;
-    fn solve_part2(&mut self) -> Self::Soln2 {
-        self.canvas
-            .pixels
-            .into_iter()
-            .map(|(_, all)| all)
-            .filter(|&overlap_count| overlap_count >= 2)
-            .count()
-    }
+fn part_2(canvas: Canvas) -> usize {
+    canvas
+        .pixels
+        .iter()
+        .map(|(_, all)| all)
+        .filter(|&&overlap_count| overlap_count >= 2)
+        .count()
 }
 
 fn read_input_line<'a>(line_str: &'a str) -> Result<Line> {
@@ -148,11 +137,5 @@ impl Canvas {
             self = self.draw_pixel_r(i, j);
         }
         self
-    }
-}
-impl Iterator for Day5 {
-    type Item = Box<dyn Debug>;
-    fn next(&mut self) -> Option<Box<dyn Debug>> {
-        self.state.next()
     }
 }

@@ -50,12 +50,9 @@ fn fold_coordinate((x, y): Coordinate, fold_instruction: FoldInstruction) -> Coo
 }
 
 fn fold_scalar(a: usize, n: usize) -> usize {
-    // print!("{n} | {a} -> ");
     if a >= n {
-        // println!("{}", n - (a % n));
         2 * n - a
     } else {
-        // println!("{a}");
         a
     }
 }
@@ -83,11 +80,11 @@ fn parse_line(coord_str: &str) -> Coordinate {
     return (x, y);
 }
 
-fn part1(coords: Vec<Coordinate>, fold_instructions: &Vec<FoldInstruction>) -> i64 {
+fn part_1(coords: Vec<Coordinate>, fold_instructions: &Vec<FoldInstruction>) -> i64 {
     fold_coordinates(Box::new(coords.clone().into_iter()), fold_instructions[0]).count() as i64
 }
 
-fn part2(coords: Vec<Coordinate>, fold_instructions: Vec<FoldInstruction>) -> String {
+fn part_2(coords: Vec<Coordinate>, fold_instructions: Vec<FoldInstruction>) -> String {
     let coords = follow_instructions(coords, fold_instructions);
     let paper = coords_to_paper(&coords);
     // print_paper(&paper);
@@ -143,11 +140,11 @@ fn read_paper(paper: [[bool; 40]; 6]) -> String {
         .collect::<String>()
 }
 
-pub fn solve(input: &str) -> Result<(Answer, Answer)> {
+pub fn solve(input: &str) -> Result<()> {
     let (coords, fold_instructions) = parse_input(input);
 
-    let soln1 = part1(coords.clone(), &fold_instructions);
-    let soln2 = part2(coords, fold_instructions);
+    let soln_1 = part_1(coords.clone(), &fold_instructions);
+    let soln_2 = part_2(coords, fold_instructions);
 
-    Ok((Box::new(soln1), Box::new(soln2)))
+    Ok((Box::new(soln_1), Box::new(soln_2)))
 }
