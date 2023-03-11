@@ -5,11 +5,6 @@ use std::{sync::mpsc::Sender, thread};
 use crate::types::Solution;
 
 pub fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
-    let depths: Vec<_> = input
-        .split("\n")
-        .map(str::parse::<u16>)
-        .collect::<Result<_, _>>()?;
-
     let tx_1 = tx.clone();
     let handle = thread::spawn(move || tx_1.send((1, 1, Ok(Box::new(part_1(depths))))));
     tx.send((1, 1, Ok(Box::new(part_2(depths)))))?;
@@ -29,4 +24,19 @@ fn part_2(depths: Vec<u16>) -> usize {
         .array_windows::<4>()
         .filter(|&[left, _, _, right]| left < right)
         .count()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn solve() {
+        let depths: Vec<_> = input
+            .split("\n")
+            .map(str::parse::<u16>)
+            .collect::<Result<_, _>>()?;
+        println!(part1(depths));
+        println!(part2(depths));
+    }
 }
