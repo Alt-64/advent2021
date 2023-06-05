@@ -1,3 +1,4 @@
-**/target
-**/dist-newstyle
-**/.DS_Store
+target/
+dist-newstyle/
+.DS_Store
+.stack-work/
