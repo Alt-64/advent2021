@@ -1,0 +1,31 @@
+cradle:
+  stack:
+    - path: "./src/day1/Main.hs"
+      component: "advent:exe:day1"
+
+    - path: "./src/day1/Paths_advent.hs"
+      component: "advent:exe:day1"
+
+    - path: "./src/day2/Main.hs"
+      component: "advent:exe:day2"
+
+    - path: "./src/day2/Paths_advent.hs"
+      component: "advent:exe:day2"
+
+    - path: "./src/day3/Main.hs"
+      component: "advent:exe:day3"
+
+    - path: "./src/day3/Paths_advent.hs"
+      component: "advent:exe:day3"
+
+    - path: "./src/day4/Main.hs"
+      component: "advent:exe:day4"
+
+    - path: "./src/day4/Paths_advent.hs"
+      component: "advent:exe:day4"
+
+    - path: "./src/day5/Main.hs"
+      component: "advent:exe:day5"
+
+    - path: "./src/day5/Paths_advent.hs"
+      component: "advent:exe:day5"

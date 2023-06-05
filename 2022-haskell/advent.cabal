@@ -1,0 +1,77 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           advent
+version:        0.0.0
+license:        MIT
+license-file:   LICENSE
+build-type:     Simple
+data-files:
+    input/day1.txt
+    input/day2.txt
+    input/day3.txt
+    input/day4.txt
+    input/day5.txt
+
+executable day1
+  main-is: Main.hs
+  other-modules:
+      Paths_advent
+  hs-source-dirs:
+      src/day1
+  build-depends:
+      base >=4.17.0.0
+    , parsec >=3.1.16.1
+    , split >=0.2.3.5
+  default-language: Haskell2010
+
+executable day2
+  main-is: Main.hs
+  other-modules:
+      Paths_advent
+  hs-source-dirs:
+      src/day2
+  build-depends:
+      base >=4.17.0.0
+    , parsec >=3.1.16.1
+    , split >=0.2.3.5
+  default-language: Haskell2010
+
+executable day3
+  main-is: Main.hs
+  other-modules:
+      Paths_advent
+  hs-source-dirs:
+      src/day3
+  build-depends:
+      base >=4.17.0.0
+    , parsec >=3.1.16.1
+    , split >=0.2.3.5
+  default-language: Haskell2010
+
+executable day4
+  main-is: Main.hs
+  other-modules:
+      Paths_advent
+  hs-source-dirs:
+      src/day4
+  build-depends:
+      base >=4.17.0.0
+    , parsec >=3.1.16.1
+    , split >=0.2.3.5
+  default-language: Haskell2010
+
+executable day5
+  main-is: Main.hs
+  other-modules:
+      Paths_advent
+  hs-source-dirs:
+      src/day5
+  build-depends:
+      base >=4.17.0.0
+    , parsec >=3.1.16.1
+    , split >=0.2.3.5
+  default-language: Haskell2010

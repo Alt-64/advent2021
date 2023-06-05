@@ -1,0 +1,24 @@
+/home/jish/.stack/programs/x86_64-linux/ghc-tinfo6-9.4.5/lib/ghc-9.4.5/lib/x86_64-linux-ghc-9.4.5/rts-1.0.2/include/ghcversion.h:
+  hash: c9b68cecb81cc4db15f76a3c4ea40203c2521a885e12fd4f77d4966e7ff2588d
+? /home/jish/Code/advent_of_code/2022-haskell/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.8.1.0/build/day2/autogen/Paths_advent.hs
+: hash: e20aa15bc180c6108b5c35c3abaf42ad294b047fa687115bbe6fac75a64f459f
+/home/jish/Code/advent_of_code/2022-haskell/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.8.1.0/build/day2/autogen/cabal_macros.h:
+  hash: 151e73a3176856890bb846c7f1b8b45e3ea02fc1a978e62f0e9afabab89425b0
+/home/jish/Code/advent_of_code/2022-haskell/advent.cabal:
+  hash: 7a3983ec462e4523fac45548ccb351763015edb43591abdc80a1e27d2b04367b
+/home/jish/Code/advent_of_code/2022-haskell/input/day1.txt:
+  hash: b6219d56adef6cfdb42856aa3f9f51888b4f64e5cd136adbad8fce85d260445e
+/home/jish/Code/advent_of_code/2022-haskell/input/day2.txt:
+  hash: e286990d5c3617602a35daf11d6cec49cf2b015da722b0dd9b736f0ab8e26371
+/home/jish/Code/advent_of_code/2022-haskell/input/day3.txt:
+  hash: 5d91f5bd4eb7b1e02405c4f01658196b688b23dac1488ef71f4835a9977fe265
+/home/jish/Code/advent_of_code/2022-haskell/input/day4.txt:
+  hash: 5b58e40c4e5bc8653c5cee061b5a257743d765966be70b7f5afdb09969114faf
+/home/jish/Code/advent_of_code/2022-haskell/input/day5.txt:
+  hash: 97efc7e9e7fb0140d9128c9dd8d1b8419f8c151c0b4d54bbd5b574b4bcab2a41
+/home/jish/Code/advent_of_code/2022-haskell/package.yaml:
+  hash: 780ee4dfa2be8c95fdd8f176a36ca72d6723073d1669e153093e35e5f06c13c4
+/home/jish/Code/advent_of_code/2022-haskell/src/day2/Main.hs:
+  hash: f2064b256f8387ad37276e6cce79b260b12e58a7328e1882718c5948685ca504
+/usr/include/stdc-predef.h:
+  hash: d6bcc58441a423bbb3a52171fcd3b84d8b36e332a55221a1c3e6e899bc43ccb3

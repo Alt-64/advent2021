@@ -1,9 +1,0 @@
-Build profile: -w ghc-9.4.2 -O1
-In order, the following will be built (use -v for more details):
- - day2-0.1.0.0 (exe:day2) (file app/Main.hs changed)
-Preprocessing executable 'day2' for day2-0.1.0.0..
-Building executable 'day2' for day2-0.1.0.0..
-[1 of 1] Compiling Main             ( app/Main.hs, /Users/jbggs/Code/advent2021/2022/day2/dist-newstyle/build/x86_64-osx/ghc-9.4.2/day2-0.1.0.0/x/day2/build/day2/day2-tmp/Main.o ) [Source file changed]
-[2 of 2] Linking /Users/jbggs/Code/advent2021/2022/day2/dist-newstyle/build/x86_64-osx/ghc-9.4.2/day2-0.1.0.0/x/day2/build/day2/day2 [Objects changed]
-8890
-10238

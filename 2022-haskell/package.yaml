@@ -1,0 +1,24 @@
+
+name: advent
+dependencies:
+- base >= 4.17.0.0
+- parsec >= 3.1.16.1
+- split >= 0.2.3.5
+data-files:
+- input/*
+executables:
+  day1:
+    main: Main.hs
+    source-dirs: src/day1
+  day2:
+    main: Main.hs
+    source-dirs: src/day2
+  day3:
+    main: Main.hs
+    source-dirs: src/day3
+  day4:
+    main: Main.hs
+    source-dirs: src/day4
+  day5:
+    main: Main.hs
+    source-dirs: src/day5
