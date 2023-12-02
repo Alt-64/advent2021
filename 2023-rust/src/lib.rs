@@ -2,8 +2,8 @@ use regex::Regex;
 
 fn _part1(input: &str) -> u32 {
     input.split('\n').map(|line| {
-        let first = line.chars().filter(|c| c.is_ascii_digit()).nth(0).unwrap();
-        let last = line.chars().rev().filter(|c| c.is_ascii_digit()).nth(0).unwrap();
+        let first = line.chars().filter(char::is_ascii_digit).nth(0).unwrap();
+        let last = line.chars().rev().filter(char::is_ascii_digit).nth(0).unwrap();
         format!("{}{}", first, last).parse::<u32>().unwrap()
     }).sum()
 }
