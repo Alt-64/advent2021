@@ -8,15 +8,12 @@ struct AdventError(String);
 
 
 fn _part1(input: &str) -> u32 {
-    let mut sum = 0;
-    for line in input.split('\n') {
+    input.split('\n').map(|line| {
         let first = line.chars().filter(|c| c.is_ascii_digit()).nth(0);
         let reversed = line.chars().rev().collect::<String>();
         let last = reversed.chars().filter(|c| c.is_ascii_digit()).nth(0);
-        let x = format!("{}{}", first.unwrap(), last.unwrap());
-        sum += x.parse::<u32>().unwrap();
-    }
-    sum
+        format!("{}{}", first.unwrap(), last.unwrap()).parse::<u32>().unwrap()
+    }).sum()
 }
 
 fn _part2(input: &str) -> Result<u32> {
