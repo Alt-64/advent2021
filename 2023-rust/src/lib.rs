@@ -1,18 +1,11 @@
 use regex::Regex;
-use anyhow::Result;
-use thiserror::*;
-
-#[derive(Error, Debug)]
-#[error("{0}")]
-struct AdventError(String);
-
 
 fn _part1(input: &str) -> u32 {
     input.split('\n').map(|line| {
-        let first = line.chars().filter(|c| c.is_ascii_digit()).nth(0);
+        let first = line.chars().filter(|c| c.is_ascii_digit()).nth(0).unwrap();
         let reversed = line.chars().rev().collect::<String>();
-        let last = reversed.chars().filter(|c| c.is_ascii_digit()).nth(0);
-        format!("{}{}", first.unwrap(), last.unwrap()).parse::<u32>().unwrap()
+        let last = reversed.chars().filter(|c| c.is_ascii_digit()).nth(0).unwrap();
+        format!("{}{}", first, last).parse::<u32>().unwrap()
     }).sum()
 }
 
