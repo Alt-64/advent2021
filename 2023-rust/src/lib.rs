@@ -16,12 +16,12 @@ fn _part1(input: &str) -> u32 {
     }).sum()
 }
 
-fn _part2(input: &str) -> Result<u32> {
-    let re_left = Regex::new(r"(one)|(two)|(three)|(four)|(five)|(six)|(seven)|(eight)|(nine)|(\d)")?;
-    let re_right = Regex::new(r"(eno)|(owt)|(eerht)|(ruof)|(evif)|(xis)|(neves)|(thgie)|(enin)|(\d)")?;
+fn _part2(input: &str) -> u32 {
+    let re_left = Regex::new(r"(one)|(two)|(three)|(four)|(five)|(six)|(seven)|(eight)|(nine)|(\d)").unwrap();
+    let re_right = Regex::new(r"(eno)|(owt)|(eerht)|(ruof)|(evif)|(xis)|(neves)|(thgie)|(enin)|(\d)").unwrap();
 
     input.split('\n').map(|line| {
-        let first = match re_left.captures(line).ok_or(AdventError("No capture".to_string()))?.get(0).unwrap().as_str() {
+        let first = match re_left.captures(line).unwrap().get(0).unwrap().as_str() {
                 "one" => '1',
                 "two" => '2',
                 "three" => '3',
@@ -35,7 +35,7 @@ fn _part2(input: &str) -> Result<u32> {
         };
 
         let reversed = line.chars().rev().collect::<String>();
-        let last = match re_right.captures(&reversed).ok_or(AdventError("No capture".to_string()))?.get(0).unwrap().as_str() { 
+        let last = match re_right.captures(&reversed).unwrap().get(0).unwrap().as_str() { 
                 "eno" => '1',
                 "owt" => '2',
                 "eerht" => '3',
@@ -48,7 +48,7 @@ fn _part2(input: &str) -> Result<u32> {
                 x => x.chars().nth(0).unwrap(),
         };
 
-        format!("{}{}", first, last).parse::<u32>().map_err(Into::into)
+        format!("{}{}", first, last).parse::<u32>().unwrap()
     }).sum()
 }
 
@@ -65,7 +65,7 @@ mod tests {
 
         let soln1 = _part1(&input);
         assert_eq!(soln1, 54331);
-        let soln2 = _part2(&input).unwrap();
+        let soln2 = _part2(&input);
         assert_eq!(soln2, 54518);
     }
 }
