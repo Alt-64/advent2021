@@ -80,6 +80,6 @@ mod tests {
         let soln1 = _part1(&input);
         assert_eq!(soln1, 175622908);
         let soln2 = _part2(&input);
-        assert_eq!(soln2, 0);
+        assert_eq!(soln2, 5200543);
     }
 }

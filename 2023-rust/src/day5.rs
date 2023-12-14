@@ -30,22 +30,17 @@ fn read_map(input: &[u8]) -> IResult<&[u8], Vec<(u64, u64, u64)>> {
         line_ending,
         map_opt(
             separated_list1(nom::character::complete::char(' '), digit1),
-            |x| x.into_iter().map(read_number).collect_tuple().map(|(a,b,c)| (a,b,b+c))
-        ),
+            |x| { 
+                let (dest, left, offset) = x.into_iter().map(read_number).collect_tuple()?;
+                let right = left + offset - 1;
+                Some((dest, left, right)) 
+            }),
     )(input)
 }
 
 fn read_maps(input: &[u8]) -> IResult<&[u8], Vec<Vec<(u64, u64, u64)>>> {
     separated_list1(pair(line_ending, line_ending), read_map)(input)
 }
-
-// fn read_map_name(input: &[u8]) -> IResult<&[u8], Vec<&[u8]>> {
-//     delimited(
-//         tag("\n\n"),
-//         separated_list1(nom::character::complete::char('-'), alpha1),
-//         tag(" map:\n"),
-//     )(input)
-// }
 
 pub fn _part1(input: &str) -> u64 {
     let (_leftover, (seeds, maps)) = pair(read_seeds, read_maps)(input.as_bytes()).unwrap();
@@ -56,9 +51,7 @@ pub fn _part1(input: &str) -> u64 {
         for m in &maps {
             for (d, left, right) in m {
                 if *left <= x && x <= *right {
-                    let y = d + (x - left);
-                    println!("{x} -> {y}");
-                    x = y;
+                    x = d + (x - left);
                     break;
                 }
             }
@@ -71,20 +64,18 @@ pub fn _part1(input: &str) -> u64 {
     // let seeds = read_seeds(lines.next().unwrap());
 }
 
-fn merge(mut intervals: Vec<(u64, u64)>) -> Vec<(u64, u64)> {
+fn merge(intervals: Vec<(u64, u64)>) -> Vec<(u64, u64)> {
     println!("{intervals:?}");
     let mut curr_stack = Vec::new();
     let mut intervals = intervals.iter();
     curr_stack.push(intervals.next().unwrap().clone());
     for (left_0, right_0) in intervals {
         let (left_1, right_1) = curr_stack.last_mut().unwrap();
-        
-        print!("{:#03?},{:#03?} and {:#03?},{:#03?}", left_0, right_0, left_1, right_1);
         if left_0 <= right_1 && right_0 >= left_1 {
             print!("merged {:#03?},{:#03?} and {:#03?},{:#03?}", left_0, right_0, left_1, right_1);
             *left_1 = *min(left_0, left_1);
             *right_1 = *max(right_0, right_1);
-            println!(" into {:#03?},{:#03?}", left_0, right_0);
+            println!(" into {:#03?},{:#03?}", left_1, right_1);
         } else {
             curr_stack.push((*left_0, *right_0))
         }
@@ -95,7 +86,6 @@ fn merge(mut intervals: Vec<(u64, u64)>) -> Vec<(u64, u64)> {
 const SIZE: u64 = 1 << 16;
 
 pub fn _part2(input: &str) -> u64 {
-    println!("WHAT THE FUCK");
     let (_leftover, (seeds, maps)) = pair(read_seeds, read_maps)(input.as_bytes()).unwrap();
     let seeds: Vec<(u64, u64)> = seeds
         .into_iter()
@@ -112,19 +102,19 @@ pub fn _part2(input: &str) -> u64 {
     let mut next_stack = Vec::new();
 
     // for map in &maps.into_iter().map(|v| v.into_iter().map(|(x, y, z)| (x % SIZE, y % SIZE, z % SIZE)).collect_vec()).collect_vec() {
+    // for map in &maps.into_iter().map(|v| v.into_iter().map(|(dest, left, offset)| (dest, left, offset)).collect_vec()).collect_vec() {
     for map in &maps {
         curr_stack = merge(curr_stack);
-        println!("{:?}", curr_stack);
         while let Some((left_0, right_0)) = curr_stack.pop() {
             let mut mapped = false;
             for &(dest, left_1, right_1) in map {
-                if left_0 <= right_1 && right_0 >= left_1 {
+                let left_overlap = max(left_0, left_1);
+                let right_overlap = min(right_0, right_1);
+
+                if left_overlap < right_overlap {
                     mapped = true;
 
-                    let left_overlap = max(left_0, left_1);
-                    let right_overlap = min(right_0, right_1);
-
-                    next_stack.push((dest + left_overlap - left_0, dest + right_overlap - right_0));
+                    next_stack.push((dest + left_overlap - left_1, dest + right_overlap - left_1));
 
                     if left_0 < left_overlap {
                         curr_stack.push((left_0, left_overlap));
@@ -138,16 +128,15 @@ pub fn _part2(input: &str) -> u64 {
                 }
             }
             if !mapped {
-                next_stack.push((left_0, right_0))
+                next_stack.push((left_0, right_0));
             }
         }
+
         // Swap Stacks
         let tmp = curr_stack;
         curr_stack = next_stack;
         next_stack = tmp;
     }
-    // curr_stack = merge(curr_stack);
-    println!("{:010?}", curr_stack);
-    curr_stack.into_iter().map(|(left, _right)| left).min().unwrap()
+    merge(curr_stack).into_iter().map(|(left, _right)| left).min().unwrap()
 
 }
