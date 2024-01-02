@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
 mod day1;
+mod day10;
+mod day11;
+mod day12;
 mod day2;
 mod day3;
 mod day4;
@@ -9,9 +12,6 @@ mod day6;
 mod day7;
 mod day8;
 mod day9;
-mod day10;
-mod day11;
-mod day12;
 
 // macro_rules! test_day {
 //     ( $day:path, $x: literal, $a:literal, $b:literal ) => {

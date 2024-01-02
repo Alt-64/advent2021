@@ -1,10 +1,10 @@
-use std::cmp::{min, max};
+use std::cmp::{max, min};
 
 use itertools::Itertools;
 use nom::{
     bytes::complete::tag,
     character::complete::{digit1, line_ending},
-    combinator::{map, map_opt, },
+    combinator::{map, map_opt},
     multi::separated_list1,
     sequence::{delimited, pair},
     IResult,
@@ -30,11 +30,12 @@ fn read_map(input: &[u8]) -> IResult<&[u8], Vec<(u64, u64, u64)>> {
         line_ending,
         map_opt(
             separated_list1(nom::character::complete::char(' '), digit1),
-            |x| { 
+            |x| {
                 let (dest, left, offset) = x.into_iter().map(read_number).collect_tuple()?;
                 let right = left + offset - 1;
-                Some((dest, left, right)) 
-            }),
+                Some((dest, left, right))
+            },
+        ),
     )(input)
 }
 
@@ -72,7 +73,10 @@ fn merge(intervals: Vec<(u64, u64)>) -> Vec<(u64, u64)> {
     for (left_0, right_0) in intervals {
         let (left_1, right_1) = curr_stack.last_mut().unwrap();
         if left_0 <= right_1 && right_0 >= left_1 {
-            print!("merged {:#03?},{:#03?} and {:#03?},{:#03?}", left_0, right_0, left_1, right_1);
+            print!(
+                "merged {:#03?},{:#03?} and {:#03?},{:#03?}",
+                left_0, right_0, left_1, right_1
+            );
             *left_1 = *min(left_0, left_1);
             *right_1 = *max(right_0, right_1);
             println!(" into {:#03?},{:#03?}", left_1, right_1);
@@ -95,7 +99,7 @@ pub fn _part2(input: &str) -> u64 {
         .map(|x| x.collect_tuple())
         // .take(5)
         .flatten()
-        .map(|(left, offset)| (left, left+offset - 1))
+        .map(|(left, offset)| (left, left + offset - 1))
         .collect();
 
     let mut curr_stack = seeds;
@@ -137,6 +141,9 @@ pub fn _part2(input: &str) -> u64 {
         curr_stack = next_stack;
         next_stack = tmp;
     }
-    merge(curr_stack).into_iter().map(|(left, _right)| left).min().unwrap()
-
+    merge(curr_stack)
+        .into_iter()
+        .map(|(left, _right)| left)
+        .min()
+        .unwrap()
 }

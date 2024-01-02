@@ -2,11 +2,9 @@ use std::{collections::HashMap, fs::read_to_string, ops::AddAssign};
 
 use itertools::Itertools;
 use nom::{
-    bytes::complete::take_while,
-    character::complete::{alphanumeric0, digit1, newline, space0, space1},
-    combinator::map_res,
-    multi::{separated_list0, separated_list1},
-    sequence::{pair, separated_pair},
+    character::complete::{alphanumeric0, digit1, newline, space1},
+    multi::{separated_list1},
+    sequence::{separated_pair},
     IResult,
 };
 
@@ -164,8 +162,6 @@ pub fn _part2() -> usize {
         .map(|(hand, bid)| (score2(hand), bid))
         .sorted_by(|(hand1, _), (hand2, _)| hand1.cmp(hand2))
         .enumerate()
-        .map(|(rank, (score, bid))| {
-            (rank + 1) * bid.parse::<usize>().unwrap()
-        })
+        .map(|(rank, (score, bid))| (rank + 1) * bid.parse::<usize>().unwrap())
         .sum()
 }

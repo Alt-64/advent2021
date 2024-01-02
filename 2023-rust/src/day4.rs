@@ -1,12 +1,11 @@
 use std::collections::HashSet;
 
 use nom::{
-    branch::alt,
     bytes::complete::tag,
     character::complete::{digit1, line_ending, multispace0, multispace1},
-    combinator::{eof, map, map_res},
-    multi::{many0, many1, separated_list1},
-    sequence::{delimited, pair, preceded, separated_pair, terminated},
+    combinator::{map, map_res},
+    multi::{many1, separated_list1},
+    sequence::{delimited, pair, preceded, separated_pair},
     IResult,
 };
 

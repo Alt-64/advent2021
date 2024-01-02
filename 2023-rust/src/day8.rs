@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fs::read_to_string,
-};
+use std::{collections::HashMap, fs::read_to_string};
 
 use nom::{
     bytes::complete::tag,
