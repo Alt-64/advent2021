@@ -1,17 +1,18 @@
 #![allow(dead_code)]
 
-mod day1;
+mod day01;
 mod day10;
 mod day11;
 mod day12;
-mod day2;
-mod day3;
-mod day4;
-mod day5;
-mod day6;
-mod day7;
-mod day8;
-mod day9;
+mod day13;
+mod day02;
+mod day03;
+mod day04;
+mod day05;
+mod day06;
+mod day07;
+mod day08;
+mod day09;
 
 // macro_rules! test_day {
 //     ( $day:path, $x: literal, $a:literal, $b:literal ) => {
@@ -33,8 +34,8 @@ mod tests {
     use std::fs::read_to_string;
 
     #[test]
-    fn day1() {
-        use crate::day1::*;
+    fn day01() {
+        use crate::day01::*;
         let input = read_to_string("input/1").unwrap();
         let input = input.trim().to_string();
 
@@ -45,8 +46,8 @@ mod tests {
     }
 
     #[test]
-    fn day2() {
-        use crate::day2::*;
+    fn day02() {
+        use crate::day02::*;
         let input = read_to_string("input/2").ok().unwrap();
         let input = input.trim().to_string();
 
@@ -57,8 +58,8 @@ mod tests {
     }
 
     #[test]
-    fn day3() {
-        use crate::day3::*;
+    fn day03() {
+        use crate::day03::*;
         let input = read_to_string("input/3").unwrap();
         let input = input.trim().to_string();
 
@@ -69,8 +70,8 @@ mod tests {
     }
 
     #[test]
-    fn day4() {
-        use crate::day4::*;
+    fn day04() {
+        use crate::day04::*;
         let input = read_to_string("input/4").unwrap();
         let input = input.trim().to_string();
 
@@ -81,8 +82,8 @@ mod tests {
     }
 
     #[test]
-    fn day5() {
-        use crate::day5::*;
+    fn day05() {
+        use crate::day05::*;
         let input = read_to_string("input/5").unwrap();
         let input = input.trim().to_string();
 
@@ -93,8 +94,8 @@ mod tests {
     }
 
     #[test]
-    fn day6() {
-        use crate::day6::*;
+    fn day06() {
+        use crate::day06::*;
         let input = read_to_string("input/6").unwrap();
         let input = input.trim().to_string();
         assert_eq!(_part1(&input), 220320);
@@ -102,22 +103,22 @@ mod tests {
     }
 
     #[test]
-    fn day7() {
-        use crate::day7::*;
+    fn day07() {
+        use crate::day07::*;
         assert_eq!(_part1(), 250946742);
         assert_eq!(_part2(), 251824095);
     }
 
     #[test]
-    fn day8() {
-        use crate::day8::*;
+    fn day08() {
+        use crate::day08::*;
         assert_eq!(_part1(), 16043);
         assert_eq!(_part2(), 15726453850399);
     }
 
     #[test]
-    fn day9() {
-        use crate::day9::*;
+    fn day09() {
+        use crate::day09::*;
         assert_eq!(part1(), 1861775706);
         assert_eq!(part2(), 1082);
     }

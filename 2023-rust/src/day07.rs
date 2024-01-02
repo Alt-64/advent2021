@@ -3,8 +3,8 @@ use std::{collections::HashMap, fs::read_to_string, ops::AddAssign};
 use itertools::Itertools;
 use nom::{
     character::complete::{alphanumeric0, digit1, newline, space1},
-    multi::{separated_list1},
-    sequence::{separated_pair},
+    multi::separated_list1,
+    sequence::separated_pair,
     IResult,
 };
 
