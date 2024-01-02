@@ -10,6 +10,8 @@ mod day7;
 mod day8;
 mod day9;
 mod day10;
+mod day11;
+mod day12;
 
 // macro_rules! test_day {
 //     ( $day:path, $x: literal, $a:literal, $b:literal ) => {
@@ -124,6 +126,20 @@ mod tests {
     fn day10() {
         use crate::day10::*;
         assert_eq!(part1(), 6931);
-        assert_eq!(part2(), 0);
+        assert_eq!(part2(), 357);
+    }
+
+    #[test]
+    fn day11() {
+        use crate::day11::*;
+        assert_eq!(part1(), 9543156);
+        assert_eq!(part2(), 625243292686);
+    }
+
+    #[test]
+    fn day12() {
+        use crate::day12::*;
+        assert_eq!(part1(), 7674);
+        assert_eq!(part2(), 4443895258186);
     }
 }

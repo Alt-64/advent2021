@@ -3,8 +3,8 @@ use std::cmp::{min, max};
 use itertools::Itertools;
 use nom::{
     bytes::complete::tag,
-    character::complete::{alpha1, digit1, line_ending, newline},
-    combinator::{map, map_opt, map_res},
+    character::complete::{digit1, line_ending},
+    combinator::{map, map_opt, },
     multi::separated_list1,
     sequence::{delimited, pair},
     IResult,

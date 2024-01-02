@@ -73,7 +73,7 @@ fn better_chars(input: &char) -> char {
         'L' => '└',
         '7' => '┐',
         '-' => '─',
-        '│' => '|',
+        '|' => '│',
          x => *x,
     }
 }
@@ -101,11 +101,10 @@ pub fn part2() -> i64 {
     }
 
     let mut inside_tile_count = 0;
-    for row in loopmap.iter_mut() {
+    for row in loopmap {
         let mut inside = false;
         let mut onpipe = ' ';
-        for tile in row.iter_mut() {
-            let x = inside_tile_count;
+        for tile in &row {
             match tile {
                 ' ' if inside && onpipe == ' ' => inside_tile_count += 1,
                 '|' => inside = !inside,
@@ -119,9 +118,6 @@ pub fn part2() -> i64 {
                     onpipe = ' '
                 },
                 _ => ()
-            }
-            if x != inside_tile_count {
-                *tile = '*'
             }
         }
         println!("{}", String::from_iter(row.iter().map(better_chars)));
