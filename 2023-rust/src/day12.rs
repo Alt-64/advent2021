@@ -1,39 +1,6 @@
 use std::fs::read_to_string;
 
 use itertools::Itertools;
-use nom::{
-    bytes::complete::{take_while, take_while1},
-    error::ParseError,
-    multi::separated_list0,
-    sequence::delimited,
-    AsChar, IResult, InputTakeAtPosition,
-};
-
-pub fn marked<T, E: ParseError<T>>(input: T) -> IResult<T, T, E>
-where
-    T: InputTakeAtPosition,
-    <T as InputTakeAtPosition>::Item: AsChar + Clone,
-{
-    input.split_at_position_complete(|item| {
-        let c = item.as_char();
-        c == '?' || c == '#'
-    })
-}
-
-fn read_springs(input: &str) -> IResult<&str, Vec<&str>> {
-    delimited(
-        take_while(|x| x == '.'),
-        separated_list0(
-            take_while1(|x| x == '.'),
-            take_while1(|x| x == '?' || x == '#'),
-        ),
-        take_while(|x| x == '.'),
-    )(input)
-}
-
-struct State {
-    pos: usize,
-}
 
 fn count_possibilities(record: &str, blocks: &str) -> usize {
     let mut expression = blocks
@@ -42,7 +9,9 @@ fn count_possibilities(record: &str, blocks: &str) -> usize {
             let x: usize = s.parse().unwrap();
             Some(vec!['@'; x.saturating_sub(1)].iter().join(""))
         })
-        .join("$!").chars().collect_vec();
+        .join("$!")
+        .chars()
+        .collect_vec();
     expression.insert(0, '!');
     expression.push('%');
 

@@ -1,10 +1,8 @@
 #![allow(dead_code)]
+#![feature(extract_if)]
+
 
 mod day01;
-mod day10;
-mod day11;
-mod day12;
-mod day13;
 mod day02;
 mod day03;
 mod day04;
@@ -13,6 +11,13 @@ mod day06;
 mod day07;
 mod day08;
 mod day09;
+mod day10;
+mod day11;
+mod day12;
+mod day13;
+mod day14;
+mod day15;
+mod day16;
 
 // macro_rules! test_day {
 //     ( $day:path, $x: literal, $a:literal, $b:literal ) => {
@@ -142,5 +147,34 @@ mod tests {
         use crate::day12::*;
         assert_eq!(part1(), 7674);
         assert_eq!(part2(), 4443895258186);
+    }
+
+    #[test]
+    fn day13() {
+        use crate::day13::*;
+        assert_eq!(part1(), 33047);
+        assert_eq!(part2(), 28806);
+    }
+
+    #[test]
+    fn day14() {
+        use crate::day14::*;
+        assert_eq!(part1(), 105461);
+        assert_eq!(part1(), part1_v2());
+        assert_eq!(part2(), 102829);
+    }
+
+    #[test]
+    fn day15() {
+        use crate::day15::*;
+        assert_eq!(part1(), 510013);
+        assert_eq!(part2(), 268497);
+    }
+
+    #[test]
+    fn day16() {
+        use crate::day16::*;
+        assert_eq!(part1(), 7939);
+        assert_eq!(part2(), 0);
     }
 }
