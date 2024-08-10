@@ -3,6 +3,8 @@ use crate::types::{expect_soln, BadInputError, Solution};
 use itertools::Itertools;
 use std::{sync::mpsc::Sender, thread};
 
+struct Day03;
+
 fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
     let bit_matrix: Vec<_> = input
         .split("\n")

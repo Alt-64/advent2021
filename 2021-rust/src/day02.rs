@@ -1,25 +1,44 @@
 // https://adventofcode.com/2021/day/2
 use std::num::ParseIntError;
-use std::sync::mpsc::Sender;
-use std::thread;
+use std::str::FromStr;
 
-use crate::types::Solution;
-
-fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
-    let commands: Vec<_> = input
-        .split("\n")
-        .map(SubCmd::try_from)
-        .collect::<Result<_, _>>()?;
-
-    let tx_1 = tx.clone();
-    let handle = thread::spawn(move || tx_1.send((1, 1, Ok(Box::new(part_1(commands))))));
-    tx.send((1, 1, Ok(Box::new(part_2(commands)))))?;
-
-    handle.join().unwrap().map_err(Into::into)
+#[derive(Default)]
+struct Dive {
+    commands: Vec<SubCmd>,
+    part: usize,
 }
 
-fn part_1(commands: Vec<SubCmd>) -> i64 {
-    let final_pos = commands
+impl FromStr for Dive {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let commands: Vec<_> = s
+            .split("\n")
+            .map(SubCmd::try_from)
+            .collect::<Result<_, _>>()?;
+        return Ok(Dive {
+            commands,
+            ..Self::default()
+        });
+    }
+}
+
+impl Iterator for Dive {
+    type Item = (usize, i64);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.part += 1;
+        match self.part {
+            1 => Some((self.part, part_1(self))),
+            2 => Some((self.part, part_2(self))),
+            _ => None,
+        }
+    }
+}
+
+fn part_1(dive: &Dive) -> i64 {
+    let final_pos = dive
+        .commands
         .iter()
         .fold(SubPos::default(), |pos, cmd| match cmd.direction {
             Direction::Forward => SubPos {
@@ -34,12 +53,14 @@ fn part_1(commands: Vec<SubCmd>) -> i64 {
                 depth: pos.depth + cmd.distance,
                 ..pos
             },
+            Direction::None => pos,
         });
     final_pos.horizontal * final_pos.depth
 }
 
-fn part_2(commands: Vec<SubCmd>) -> i64 {
-    let final_pos = commands
+fn part_2(dive: &Dive) -> i64 {
+    let final_pos = dive
+        .commands
         .iter()
         .fold(SubPos::default(), |pos, cmd| match cmd.direction {
             Direction::Forward => SubPos {
@@ -55,6 +76,7 @@ fn part_2(commands: Vec<SubCmd>) -> i64 {
                 aim: pos.aim + cmd.distance,
                 ..pos
             },
+            Direction::None => pos,
         });
     final_pos.horizontal * final_pos.depth
 }
@@ -78,6 +100,7 @@ enum Direction {
     Forward,
     Up,
     Down,
+    None,
 }
 
 impl From<&str> for Direction {
@@ -86,7 +109,7 @@ impl From<&str> for Direction {
             "forward" => Direction::Forward,
             "up" => Direction::Up,
             "down" => Direction::Down,
-            _ => panic!(),
+            _ => Direction::None,
         }
     }
 }
@@ -108,5 +131,21 @@ impl TryFrom<&str> for SubCmd {
             direction,
             distance,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const DAY: usize = 2;
+
+    #[test]
+    fn solve() {
+        let input = include_str!("day02.txt");
+        let dive = Dive::from_str(input).expect("failed to read input string");
+        for (i, result) in dive {
+            println!("Day {DAY} Part {i} {result}")
+        }
     }
 }

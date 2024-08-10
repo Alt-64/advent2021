@@ -27,10 +27,10 @@ impl std::fmt::Display for BadInputError {
     }
 }
 
-pub fn expect_soln<T: Display + Send + Sync>(
-    x: Option<T>,
-) -> anyhow::Result<Box<dyn Display + Send + Sync>> {
-    x.map(|x| Box::new(x) as Box<dyn Display + Send + Sync>)
-        .ok_or(NoSolutionError)
-        .map_err(Into::into)
-}
+// pub fn expect_soln<T: Display + Send + Sync>(
+//     x: Option<T>,
+// ) -> anyhow::Result<Box<dyn Display + Send + Sync>> {
+//     x.map(|x| Box::new(x) as Box<dyn Display + Send + Sync>)
+//         .ok_or(NoSolutionError)
+//         .map_err(Into::into)
+// }

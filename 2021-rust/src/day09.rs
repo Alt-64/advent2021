@@ -1,32 +1,28 @@
 use crate::types::{BadInputError, Solution};
 use anyhow::{anyhow, Result};
-use itertools::iproduct;
+use itertools::{iproduct, Itertools};
 use std::{sync::mpsc::Sender, thread};
 
 type Coordinate = (usize, usize);
-fn solve(input: &str, tx: Sender<(usize, usize, Solution)>) -> anyhow::Result<()> {
+pub fn solve(input: &str) -> Result<(usize, usize)> {
     let height_map = HeightMap::try_from(input)?;
     let bottom_coords: Vec<_> = height_map.iter_bottoms().collect();
 
-    let tx_1 = tx.clone();
-    let handle = thread::spawn(move || {
-        let bottom_heights: Vec<_> = bottom_coords
-            .iter()
-            .map(|&coord| height_map.get_height_at(coord))
-            .flatten()
-            .collect();
-        let sum_heights = bottom_heights.iter().map(|x| *x as i64).sum::<i64>();
-        let cumulative_risk_level = bottom_heights.len() as i64;
-        let soln_1 = sum_heights + cumulative_risk_level;
-        tx_1.send((9, 1, Ok(Box::new(soln_1))))
-    });
+    let bottom_heights: Vec<_> = bottom_coords
+        .iter()
+        .map(|&coord| height_map.get_height_at(coord))
+        .flatten()
+        .collect();
+
+    let sum_heights = bottom_heights.iter().map(|x| *x as usize).sum::<usize>();
+    let cumulative_risk_level = bottom_heights.len();
+    let soln_1 = sum_heights + cumulative_risk_level;
 
     let soln_2 = get_top_basin_sizes(&bottom_coords, height_map)
         .into_iter()
         .product::<usize>();
-    tx.send((9, 2, Ok(Box::new(soln_2))));
 
-    handle.join().unwrap().map_err(|e| anyhow!(e))
+    Ok((soln_1, soln_2))
 }
 
 fn get_surrounding_coords((x, y): Coordinate) -> [Option<Coordinate>; 4] {
@@ -76,7 +72,7 @@ impl HeightMap {
         self.map.get(y * self.width + x).cloned()
     }
 
-    fn get_height_at_mut(&self, (x, y): Coordinate) -> Option<&mut u8> {
+    fn get_height_at_mut(&mut self, (x, y): Coordinate) -> Option<&mut u8> {
         self.map.get_mut(y * self.width + x)
     }
 
@@ -106,7 +102,7 @@ impl HeightMap {
         self.flood(coord);
         let after = self.count_filled();
 
-        return before - after;
+        before - after
     }
 }
 
@@ -127,24 +123,21 @@ impl Floodable<u8> for HeightMap {
 
 #[derive(Clone, Copy)]
 enum ScanDirection {
-    Up(usize),
-    Down(usize),
-}
-
-impl Iterator for ScanDirection {
-    fn next(&mut self) -> Option<usize> {
-        match self {
-            ScanDirection::Up(x) => ScanDirection::Up(x.checked_sub(1)?),
-            ScanDirection::Down(x) => ScanDirection::Down(x.checked_add(1)?),
-        }
-    }
+    Up,
+    Down,
 }
 
 impl ScanDirection {
     fn reverse(self) -> ScanDirection {
         match self {
-            ScanDirection::Up(x) => ScanDirection::Down(x),
-            ScanDirection::Down(x) => ScanDirection::Up(x),
+            ScanDirection::Up => ScanDirection::Down,
+            ScanDirection::Down => ScanDirection::Up,
+        }
+    }
+    fn next_y(&self, y: usize) -> Option<usize> {
+        match self {
+            ScanDirection::Up => y.checked_sub(1),
+            ScanDirection::Down => y.checked_add(1),
         }
     }
 }
@@ -164,7 +157,7 @@ trait Floodable<T> {
             x = nx;
             self.color((nx, y));
         }
-        return x;
+        x
     }
 
     fn flood(&mut self, coord: Coordinate) {
@@ -277,8 +270,10 @@ fn print_basin(
                 print!(" ")
             } else if j == x && i == y {
                 print!("\u{001b}[31m{}\u{001b}[0m ", h1[i][j])
-            } else if let Some(clone) = h2 && clone[i][j] != h1[i][j] {
-                print!("\u{001b}[32m{}\u{001b}[0m ", h1[i][j])
+            } else if let Some(clone) = h2 {
+                if clone[i][j] != h1[i][j] {
+                    print!("\u{001b}[32m{}\u{001b}[0m ", h1[i][j])
+                }
             } else {
                 print!("{} ", h1[i][j])
             };
@@ -297,9 +292,13 @@ fn print_cavern(h1: &Vec<Vec<u8>>, h2: Option<&Vec<Vec<u8>>>, basin: Option<&Vec
     for i in 0..h1.len() {
         print!("{i:#2} | ");
         for j in 0..h1[i].len() {
-            if let Some(b) = basin && b.contains(&(j, i)) {
+            if let Some(b) = basin
+                && b.contains(&(j, i))
+            {
                 print!("\u{001b}[32m*\u{001b}[0m ");
-            } else if let Some(clone) = h2 && clone[i][j] != h1[i][j] {
+            } else if let Some(clone) = h2
+                && clone[i][j] != h1[i][j]
+            {
                 print!("\u{001b}[34m{}\u{001b}[0m ", h1[i][j]);
             } else if h1[i][j] == 9 {
                 print!("  ");
