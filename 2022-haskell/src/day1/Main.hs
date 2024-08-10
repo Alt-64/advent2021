@@ -1,23 +1,38 @@
 module Main where
 
-import Data.List.Split ( linesBy )
-import Data.List ( sortOn )
-import Data.Ord ( Down(Down) )
+import Control.Applicative
+import Data.List (sortOn)
+import Data.List.Split (linesBy)
+import Data.Ord (Down (Down))
+import GHC.Read (readNumber)
 import Paths_advent (getDataFileName)
+import Text.Parsec
+import Text.ParserCombinators.Parsec.Number
 
-getTotalCalories :: String -> [Integer]
-getTotalCalories = fmap countCalories . getInventories 
+foodCalories = do
+  n <- many1 digit
+  return (read n)
 
-getInventories :: String -> [[String]]
-getInventories = linesBy (=="") <$> lines
+foodInventory = sepBy foodCalories (char '\n')
 
-countCalories :: [String] -> Integer
-countCalories foods = sum $ caloriesIn <$> foods 
-    where caloriesIn = read
-    
+input = endBy foodInventory eof
+
+countInventoryCalories :: [String] -> Integer
+countInventoryCalories foods = sum $ caloriesIn <$> foods
+  where
+    caloriesIn = read
+
+filename = "input/day1.txt"
+
 main :: IO ()
 main = do
-    input <- getDataFileName "day1" >>= readFile
-    let calories = sortOn Down . getTotalCalories $ input
-    print . head $ calories 
-    print . sum $ take 3 calories 
+  content <- getDataFileName filename >>= readFile
+  case parse input filename content of
+    Left err -> print err
+    Right inventories -> do
+      print inventories
+      print (soln1, soln2)
+      where
+        calories = sortOn Down $ countInventoryCalories <$> inventories
+        soln1 = head calories
+        soln2 = sum $ take 3 calories

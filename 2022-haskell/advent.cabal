@@ -25,6 +25,7 @@ executable day1
   build-depends:
       base >=4.17.0.0
     , parsec >=3.1.16.1
+    , parsec-numbers >=0.1.0
     , split >=0.2.3.5
   default-language: Haskell2010
 
@@ -37,6 +38,7 @@ executable day2
   build-depends:
       base >=4.17.0.0
     , parsec >=3.1.16.1
+    , parsec-numbers >=0.1.0
     , split >=0.2.3.5
   default-language: Haskell2010
 
@@ -49,6 +51,7 @@ executable day3
   build-depends:
       base >=4.17.0.0
     , parsec >=3.1.16.1
+    , parsec-numbers >=0.1.0
     , split >=0.2.3.5
   default-language: Haskell2010
 
@@ -61,6 +64,7 @@ executable day4
   build-depends:
       base >=4.17.0.0
     , parsec >=3.1.16.1
+    , parsec-numbers >=0.1.0
     , split >=0.2.3.5
   default-language: Haskell2010
 
@@ -73,5 +77,6 @@ executable day5
   build-depends:
       base >=4.17.0.0
     , parsec >=3.1.16.1
+    , parsec-numbers >=0.1.0
     , split >=0.2.3.5
   default-language: Haskell2010
