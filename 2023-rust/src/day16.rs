@@ -1,11 +1,9 @@
 use std::{
-    cmp::max,
     collections::{HashMap, HashSet},
     fs::read_to_string,
 };
 
-use itertools::{Itertools, MinMaxResult};
-use num::Saturating;
+use itertools::Itertools;
 
 enum Fixture {
     VerticalSplitter,

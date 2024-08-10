@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![feature(extract_if)]
 
-
+mod clumsy_crucible;
 mod day01;
 mod day02;
 mod day03;
@@ -175,6 +175,13 @@ mod tests {
     fn day16() {
         use crate::day16::*;
         assert_eq!(part1(), 7939);
-        assert_eq!(part2(), 0);
+        assert_eq!(part2(), 8318);
+    }
+
+    #[test]
+    fn day17() {
+        use crate::clumsy_crucible::*;
+        assert_eq!(part1(), 0);
+        // assert_eq!(part2(), 0);
     }
 }

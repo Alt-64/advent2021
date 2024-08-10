@@ -1,17 +1,14 @@
 use std::{
-    collections::{HashMap, HashSet},
     fs::read_to_string,
     hash::{DefaultHasher, Hash, Hasher},
 };
-
-use itertools::Itertools;
 
 pub fn part1() -> usize {
     let mut blocker = [SIZE; SIZE];
     let mut stones = [0; SIZE];
     let mut weight = 0;
     for (i, line) in read_to_string("input/14").unwrap().lines().enumerate() {
-    // for (i, line) in TEST.lines().enumerate() {
+        // for (i, line) in TEST.lines().enumerate() {
         for (j, c) in line.chars().enumerate() {
             match c {
                 '.' => (),
@@ -40,7 +37,7 @@ pub fn part1_v2() -> usize {
     let mut stones_curr = [ARRAY_REPEAT_VALUE; SIZE];
     let mut stones_next = [ARRAY_REPEAT_VALUE; SIZE];
     for (y, line) in read_to_string("input/14").unwrap().lines().enumerate() {
-    // for (y, line) in TEST.lines().enumerate() {
+        // for (y, line) in TEST.lines().enumerate() {
         for (x, c) in line.chars().enumerate() {
             match c {
                 '.' => (),
@@ -130,7 +127,7 @@ pub fn part2() -> usize {
     let mut states = Vec::<u64>::new();
     let mut loads = Vec::<usize>::new();
     for (y, line) in read_to_string("input/14").unwrap().lines().enumerate() {
-    // for (y, line) in TEST.lines().enumerate() {
+        // for (y, line) in TEST.lines().enumerate() {
         for (x, c) in line.chars().enumerate() {
             match c {
                 '.' => (),
